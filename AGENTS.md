@@ -70,3 +70,13 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 - **Manejo de errores en UI**: los flujos que pueden fallar deben redirigir con `withErrors(['error' => ...])` (el layout lo muestra como toast), nunca dejar 404/500 crudos. Guards vigentes: producto desactivado no se edita (`edit`/`update` cargan `withTrashed()` y redirigen; el botón Editar se oculta en filas trashed), impuesto con productos / cliente con facturas / último admin / auto-eliminación no se eliminan, `pagarCredito` sin tasa de referencia redirige con aviso (botón Cobrar se deshabilita sin `$tasaVigente`). Páginas de error propias (español) en `resources/views/errors/{403,404,500,503}.blade.php` — Laravel las usa automáticamente al existir.
 - Thermal printing: see `docs/IMPRESORA.md` (mike42/escpos-php).
 - Git: `main` is the integration branch; `login-mejorado` is an open feature branch (login redesign). Local feature branches (e.g. `tasas-dinamicas`) get fast-forwarded into `main` after their feature tests pass. Keep commits in Spanish.
+
+## Migración del sistema viejo
+
+- Comando artisan: `php artisan migrar:inventario-viejo --archivo="ruta/archivo.sql" [--force]`
+- Parsea INSERT SQL de la tabla vieja `inventories` (15 columnas por fila, encoding Latin1/Win-1252 auto-detectado).
+- Mapeo: `name` → categoría, `description` → nombre producto, `status` → estado, `iva` 0/1 → impuesto IVA (16%), `daily_dollar` 0/1/2 → fuente_tasa (bcv/usdt/promedio), `porcentage_profit` → margen, `precie_unit / (1+profit)` → costo_usd. **Stock se excluye** (queda en 0; el conteo es manual).
+- Fusiona pares normal + "Mayor" al final en 1 producto con 2 presentaciones (Unidad + Mayor con `factor_conversion = units_package`). Solo-Mayor se crea como 1 presentación "Mayor".
+- `--force` trunca productos y presentaciones antes de re-ejecutar. Es idempotente sin `--force` (salta productos ya existentes por `nombre`).
+- Seeder: `TasaReferenciaSeeder` crea filas iniciales para tipos `bcv`, `usdt`, `promedio` en `tasa_cambios` (monto 0) y fija `Configuracion.tasa_referencia = 'bcv'`.
+- Tests: `tests/Feature/MigrarInventarioViejoTest.php` (14 tests: parseo, categorías, IVA, fusiones, fuente_tasa, costo, idempotencia, force, encoding, imagen).
