@@ -10,6 +10,10 @@ use Carbon\CarbonInterface;
 
 class RecordatorioTasa implements Notificacion
 {
+    private ?CarbonInterface $ventanaCache = null;
+
+    private bool $ventanaCalculada = false;
+
     public function tipo(): string
     {
         return 'recordatorio_tasa';
@@ -65,24 +69,32 @@ class RecordatorioTasa implements Notificacion
      */
     private function ventanaVencida(CarbonInterface $ahora): ?CarbonInterface
     {
-        if (! $this->estaHabilitado()) {
-            return null;
+        if ($this->ventanaCalculada) {
+            return $this->ventanaCache;
         }
 
-        $tasa = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
-        $ultimaActualizacion = $tasa?->created_at;
+        $resultado = null;
 
-        foreach ($this->horas() as $hora) {
-            if ($ahora->lt($hora)) {
-                continue;
-            }
+        if ($this->estaHabilitado()) {
+            $tasa = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
+            $ultimaActualizacion = $tasa?->created_at;
 
-            if (! $ultimaActualizacion || $ultimaActualizacion->lt($hora)) {
-                return $hora;
+            foreach ($this->horas() as $hora) {
+                if ($ahora->lt($hora)) {
+                    continue;
+                }
+
+                if (! $ultimaActualizacion || $ultimaActualizacion->lt($hora)) {
+                    $resultado = $hora;
+                    break;
+                }
             }
         }
 
-        return null;
+        $this->ventanaCalculada = true;
+        $this->ventanaCache = $resultado;
+
+        return $resultado;
     }
 
     private function estaHabilitado(): bool

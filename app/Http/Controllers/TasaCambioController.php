@@ -146,6 +146,7 @@ class TasaCambioController extends Controller
             ['clave' => self::TASA_REFERENCIA_CLAVE],
             ['valor' => $request->referencia]
         );
+        Configuracion::olvidar(self::TASA_REFERENCIA_CLAVE);
 
         $tasa = TasaCambio::ultimaDe($request->referencia);
 

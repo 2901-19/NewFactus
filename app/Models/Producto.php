@@ -38,7 +38,13 @@ class Producto extends Model
 
     public function getPrecioBaseAttribute(): float
     {
-        $base = $this->presentaciones()->where('activa', true)->where('factor_conversion', 1)->first();
+        if ($this->relationLoaded('presentaciones')) {
+            $base = $this->presentaciones->first(
+                fn ($pres) => $pres->activa && (float) $pres->factor_conversion === 1.0
+            );
+        } else {
+            $base = $this->presentaciones()->where('activa', true)->where('factor_conversion', 1)->first();
+        }
 
         return $base ? (float) $base->precio_usd : 0;
     }

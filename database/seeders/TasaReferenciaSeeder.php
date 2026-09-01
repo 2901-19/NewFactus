@@ -31,12 +31,13 @@ class TasaReferenciaSeeder extends Seeder
             ]);
         }
 
-        $referencia = Configuracion::obtener('tasa_referencia');
+        $referencia = Configuracion::where('clave', 'tasa_referencia')->exists();
         if (! $referencia) {
             Configuracion::updateOrCreate(
                 ['clave' => 'tasa_referencia'],
                 ['valor' => 'bcv']
             );
         }
+        Configuracion::olvidar('tasa_referencia');
     }
 }
