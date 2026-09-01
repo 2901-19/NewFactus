@@ -20,56 +20,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($productos as $p)
-                        @forelse ($p->presentaciones as $pr)
-                        @php
-                            $tasaFila = $tasas->get($pr['fuente_tasa']);
-                            $filaOk = $tasaFila && (float) $tasaFila->monto > 0;
-                        @endphp
-                        <tr>
-                            <td class="text-start">{{ $p->nombre }}</td>
-                            <td>
-                                @if ($p->imagen_url)
-                                    <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
-                                @else
-                                    <span class="text-muted sin-ref">Sin referencia</span>
-                                @endif
-                            </td>
-                            <td class="text-start">{{ $pr['nombre'] }}</td>
-                            <td class="small text-nowrap">
-                                @if ($filaOk)
-                                    <strong>Bs {{ number_format($pr['precio_usd'] * $tasaFila->monto, 2) }}</strong>
-                                    <small class="text-muted">
-                                        @if ($tasaReferenciaMonto)
-                                            (${{ number_format($pr['precio_usd'] * $tasaFila->monto / $tasaReferenciaMonto, 2) }})
-                                        @else
-                                            (${{ number_format($pr['precio_usd'], 2) }})
-                                        @endif
-                                    </small>
-                                @else
-                                    <span class="badge bg-danger" title="Configure la tasa '{{ $pr['fuente_tasa'] }}' en Tasas de Cambio para poder vender este producto">Sin tasa</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" data-presentacion="{{ $pr['id'] }}" title="Agregar al carrito" @disabled(! $filaOk)>
-                                    <i class="bi bi-cart-plus"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td class="text-start">{{ $p->nombre }}</td>
-                            <td>
-                                @if ($p->imagen_url)
-                                    <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
-                                @else
-                                    <span class="text-muted sin-ref">Sin referencia</span>
-                                @endif
-                            </td>
-                            <td colspan="3" class="text-muted">Sin presentaciones activas</td>
-                        </tr>
-                        @endforelse
-                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -395,11 +345,71 @@ document.addEventListener('alpine:init', () => {
         init() {
             if ($.fn.DataTable) {
                 this.dataTable = $('#productosTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: '/pos/productos',
+                        data: (d) => ({
+                            draw: d.draw,
+                            start: d.start !== undefined ? d.start : 0,
+                            length: d.length,
+                            ['search[value]']: d.search ? d.search.value : '',
+                        }),
+                    },
                     pageLength: 15,
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
+                    columns: [
+                        { data: 'nombre' },
+                        { data: 'imagen' },
+                        { data: 'presentacion' },
+                        { data: 'precio_bs' },
+                        { data: null, orderable: false, searchable: false },
+                    ],
                     columnDefs: [
-                        { targets: 4, orderable: false },
+                        {
+                            targets: 1,
+                            render: (data) => data
+                                ? '<img src="' + data + '" class="thumb" alt="">'
+                                : '<span class="text-muted sin-ref">Sin referencia</span>',
+                        },
+                        {
+                            targets: 2,
+                            render: (data, type, row) => {
+                                if (row.sin_presentaciones) {
+                                    return '<span class="text-muted">Sin presentaciones activas</span>';
+                                }
+                                return data;
+                            },
+                        },
+                        {
+                            targets: 3,
+                            className: 'small text-nowrap',
+                            render: (data, type, row) => {
+                                if (row.sin_presentaciones || !row.fila_ok) {
+                                    const title = row.fuente_tasa
+                                        ? "Configure la tasa '" + row.fuente_tasa + "' en Tasas de Cambio para poder vender este producto"
+                                        : 'Sin presentaciones activas';
+                                    return '<span class="badge bg-danger" title="' + title + '">Sin tasa</span>';
+                                }
+                                let html = '<strong>Bs ' + Number(data).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
+                                const usd = Number(row.precio_usd_bs);
+                                if (!isNaN(usd) && usd > 0) {
+                                    html += '<small class="text-muted">($' + usd.toFixed(2) + ')</small>';
+                                }
+                                return html;
+                            },
+                        },
+                        {
+                            targets: 4,
+                            className: 'text-center',
+                            render: (data, type, row) => {
+                                if (row.sin_presentaciones || !row.fila_ok) {
+                                    return '<button class="btn btn-sm btn-outline-primary agregar-producto" disabled title="Sin tasa"><i class="bi bi-cart-plus"></i></button>';
+                                }
+                                return '<button class="btn btn-sm btn-outline-primary agregar-producto" data-id="' + row.producto_id + '" data-presentacion="' + row.presentacion_id + '" title="Agregar al carrito"><i class="bi bi-cart-plus"></i></button>';
+                            },
+                        },
                     ],
                 });
 

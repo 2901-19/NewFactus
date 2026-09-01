@@ -21,33 +21,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($productos as $p)
-                    <tr x-data="precioRow({{ $p->id }}, {{ $p->costo_usd }}, (window.__preciosProductos[{{ $p->id }}] || []))">
-                        <td class="text-start">
-                            {{ $p->nombre }}
-                        </td>
-                        <td>{{ $p->categoria->nombre ?? '-' }}</td>
-                        <td>
-                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model.number="costo_usd">
-                        </td>
-                        <td class="text-start">
-                            <template x-for="(pres, i) in presentaciones" :key="pres.id">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    <span class="small text-nowrap" style="min-width:110px" x-text="pres.nombre"></span>
-                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center" style="width:90px" x-model.number="pres.margen">
-                                    <span class="small text-muted text-nowrap">factor: <span x-text="pres.factor_conversion"></span></span>
-                                    <span class="small fw-bold text-nowrap" x-text="tasaDe(pres.fuente_tasa) > 0 ? '$' + precioPres(i).toFixed(2) + ' / Bs ' + (precioPres(i) * tasaDe(pres.fuente_tasa)).toFixed(2) : '$' + precioPres(i).toFixed(2) + ' / Bs sin tasa'"></span>
-                                </div>
-                            </template>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" @click="guardar" :disabled="cargando">
-                                <i class="bi bi-check-lg" x-show="!cargando"></i>
-                                <span x-show="cargando" class="spinner-border spinner-border-sm"></span>
-                            </button>
-                        </td>
-                    </tr>
-                    @endforeach
                 </tbody>
             </table>
         </div>
@@ -56,7 +29,6 @@
 @endsection
 @push('scripts')
 <script>
-window.__preciosProductos = @json($productos->mapWithKeys(fn ($p) => [$p->id => $p->presentaciones]));
 window.__tasasMapa = @json($tasas);
 function precioRow(id, costoUsd, presentaciones) {
     return {
@@ -103,11 +75,50 @@ function precioRow(id, costoUsd, presentaciones) {
     };
 }
 
+function cargaTemplates() {
+    return `<template x-for="(pres, i) in presentaciones" :key="pres.id">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="small text-nowrap" style="min-width:110px" x-text="pres.nombre"></span>
+            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center" style="width:90px" x-model.number="pres.margen">
+            <span class="small text-muted text-nowrap">factor: <span x-text="pres.factor_conversion"></span></span>
+            <span class="small fw-bold text-nowrap" x-text="tasaDe(pres.fuente_tasa) > 0 ? '$' + precioPres(i).toFixed(2) + ' / Bs ' + (precioPres(i) * tasaDe(pres.fuente_tasa)).toFixed(2) : '$' + precioPres(i).toFixed(2) + ' / Bs sin tasa'"></span>
+        </div>
+    </template>`;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     if ($.fn.DataTable) {
         $('#tabla-precios').DataTable({
-            columnDefs: [{ orderable: false, targets: -1 }],
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '/productos/ajustar-precios/data',
+                data: (d) => ({
+                    draw: d.draw,
+                    start: d.start !== undefined ? d.start : 0,
+                    length: d.length,
+                    ['search[value]']: d.search ? d.search.value : '',
+                }),
+            },
+            columns: [
+                { data: 'nombre', className: 'text-start' },
+                { data: 'categoria' },
+                { data: null, orderable: false },
+
+                { data: null, orderable: false },
+                { data: null, orderable: false },
+            ],
+            columnDefs: [
+                { targets: 2, render: () => '<input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model.number="costo_usd">' },
+                { targets: 3, render: () => cargaTemplates() },
+                { targets: 4, render: () => '<button class="btn btn-sm btn-primary" @click="guardar" :disabled="cargando"><i class="bi bi-check-lg" x-show="!cargando"></i><span x-show="cargando" class="spinner-border spinner-border-sm"></span></button>' },
+            ],
+            order: [],
             language: window.DataTableSpanish,
+            rowCallback: (row, data) => {
+                $(row).attr('x-data', 'precioRow(' + data.producto_id + ',' + data.costo_usd + ',' + JSON.stringify(data.presentaciones || []) + ')');
+                if (window.Alpine) window.Alpine.initTree(row);
+            },
         });
     }
 });

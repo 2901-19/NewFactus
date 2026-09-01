@@ -35,11 +35,15 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('productos/data', [ProductoController::class, 'data'])->name('productos.data')->middleware('permiso:gestionar-productos');
     Route::resource('productos', ProductoController::class)->except('show')->middleware('permiso:gestionar-productos');
     Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore')->middleware('permiso:gestionar-productos');
 
     Route::get('/productos/ajustar-precios', [AjusteController::class, 'editarPrecios'])
         ->name('productos.ajustar-precios')
+        ->middleware('permiso:actualizar-precios');
+    Route::get('/productos/ajustar-precios/data', [AjusteController::class, 'preciosData'])
+        ->name('productos.ajustar-precios.data')
         ->middleware('permiso:actualizar-precios');
     Route::post('/productos/{producto}/ajustar-precio', [AjusteController::class, 'guardarPrecio'])
         ->name('productos.ajustar-precio')
@@ -64,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/categorias/{categoria}/asignar-productos', [CategoriaController::class, 'asignarProductos'])->name('categorias.asignar-productos')->middleware('permiso:gestionar-categorias');
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos')->middleware('permiso:usar-pos');
+    Route::get('/pos/productos', [FacturaController::class, 'posProductos'])->name('facturas.pos.productos')->middleware('permiso:usar-pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('permiso:crear-facturas');
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('permiso:ver-facturas');
     Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos')->middleware('permiso:gestionar-creditos');

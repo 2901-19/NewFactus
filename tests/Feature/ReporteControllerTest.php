@@ -11,6 +11,7 @@ use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
 use App\Models\User;
+use App\Services\CatalogoService;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -350,5 +351,22 @@ class ReporteControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_stock_usa_umbral_como_parametro_no_columna()
+    {
+        $this->actingAs($this->cajero);
+
+        $sql = Producto::whereNull('deleted_at')
+            ->where('estado', 'disponible')
+            ->where('unidad_medida', 'unidad')
+            ->where('stock_actual', '<=', CatalogoService::UMBRAL_STOCK_BAJO)
+            ->toSql();
+
+        $this->assertStringContainsString('stock_actual" <= ?', $sql);
+        $this->assertStringNotContainsString('"'.CatalogoService::UMBRAL_STOCK_BAJO.'"', $sql);
+
+        $response = $this->get('/reportes/stock');
+        $response->assertStatus(200);
     }
 }

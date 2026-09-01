@@ -54,11 +54,76 @@ class FacturaController extends Controller
 
     public function pos()
     {
-        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with(['presentaciones', 'impuesto'])->get();
-        $tasas = TasaCambio::ultimasPorTipo();
+        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')
+            ->with(['presentaciones', 'impuesto'])
+            ->get()
+            ->map(fn ($producto) => $this->productoParaCatalogo($producto))
+            ->values();
 
-        $productos->each(function ($producto) {
-            $producto->setAttribute('presentaciones', $producto->presentaciones
+        $clientes = Cliente::all();
+
+        $tasas = TasaCambio::ultimasPorTipo();
+        $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
+        $tasaReferenciaMonto = $tasas->has($tasaReferenciaTipo) ? (float) $tasas[$tasaReferenciaTipo]->monto : null;
+
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo', 'tasaReferenciaMonto'));
+    }
+
+    public function posProductos(Request $request)
+    {
+        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')
+            ->with(['presentaciones', 'impuesto'])
+            ->when($request->filled('search.value'), function ($q) use ($request) {
+                $q->where('nombre', 'ilike', '%'.$request->input('search.value').'%');
+            })
+            ->orderBy('nombre')
+            ->get();
+
+        $tasas = TasaCambio::ultimasPorTipo();
+        $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
+        $tasaReferenciaMonto = $tasas->has($tasaReferenciaTipo) ? (float) $tasas[$tasaReferenciaTipo]->monto : null;
+
+        $filas = collect();
+        foreach ($productos as $producto) {
+            $presentacionesActivas = $producto->presentaciones->where('activa', true);
+
+            if ($presentacionesActivas->isEmpty()) {
+                $filas->push($this->filaPos($producto, null, null, $tasas, $tasaReferenciaMonto, true));
+
+                continue;
+            }
+
+            foreach ($presentacionesActivas as $presentacion) {
+                $filas->push($this->filaPos($producto, $presentacion, $presentacionesActivas, $tasas, $tasaReferenciaMonto, false));
+            }
+        }
+
+        $start = max(0, (int) $request->input('start', 0));
+        $length = max(1, (int) $request->input('length', 15));
+        $data = $filas->slice($start, $length)->values();
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 0),
+            'recordsTotal' => $filas->count(),
+            'recordsFiltered' => $filas->count(),
+            'data' => $data,
+        ]);
+    }
+
+    private function productoParaCatalogo(Producto $producto): array
+    {
+        return [
+            'id' => $producto->id,
+            'nombre' => $producto->nombre,
+            'controla_inventario' => $producto->controla_inventario,
+            'stock_actual' => (float) $producto->stock_actual,
+            'unidad_medida' => $producto->unidad_medida,
+            'impuesto' => $producto->impuesto ? [
+                'id' => $producto->impuesto->id,
+                'nombre' => $producto->impuesto->nombre,
+                'porcentaje' => (float) $producto->impuesto->porcentaje,
+            ] : null,
+            'presentaciones' => $producto->presentaciones
                 ->filter(fn ($pr) => $pr->activa)
                 ->values()
                 ->map(fn ($pr) => [
@@ -68,15 +133,46 @@ class FacturaController extends Controller
                     'margen' => (float) $pr->margen,
                     'precio_usd' => (float) $pr->precio_usd,
                     'fuente_tasa' => $pr->fuente_tasa,
-                ]));
-        });
+                ]),
+        ];
+    }
 
-        $clientes = Cliente::all();
+    private function filaPos(Producto $producto, ?ProductoPresentacion $presentacion, $presentacionesActivas, $tasas, ?float $tasaReferenciaMonto, bool $sinPresentaciones): array
+    {
+        $tasaFila = $presentacion ? $tasas->get($presentacion->fuente_tasa) : null;
+        $filaOk = $presentacion && $tasaFila && (float) $tasaFila->monto > 0;
 
-        $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
-        $tasaReferenciaMonto = $tasas->has($tasaReferenciaTipo) ? (float) $tasas[$tasaReferenciaTipo]->monto : null;
+        if ($sinPresentaciones) {
+            return [
+                'nombre' => $producto->nombre,
+                'imagen' => $producto->imagen_url,
+                'presentacion' => null,
+                'precio_bs' => null,
+                'precio_usd_bs' => null,
+                'precio_usd' => null,
+                'fila_ok' => false,
+                'sin_presentaciones' => true,
+                'producto_id' => $producto->id,
+            ];
+        }
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo', 'tasaReferenciaMonto'));
+        $precioUsd = (float) $presentacion->precio_usd;
+        $precioBs = $filaOk ? $precioUsd * (float) $tasaFila->monto : null;
+        $precioUsdBs = $precioBs !== null && $tasaReferenciaMonto ? $precioBs / $tasaReferenciaMonto : ($precioBs !== null ? $precioUsd : null);
+
+        return [
+            'nombre' => $producto->nombre,
+            'imagen' => $producto->imagen_url,
+            'presentacion' => $presentacion->nombre,
+            'precio_bs' => $precioBs,
+            'precio_usd_bs' => $precioUsdBs,
+            'precio_usd' => $precioUsd,
+            'fila_ok' => $filaOk,
+            'sin_presentaciones' => false,
+            'producto_id' => $producto->id,
+            'presentacion_id' => $presentacion->id,
+            'fuente_tasa' => $presentacion->fuente_tasa,
+        ];
     }
 
     public function store(Request $request)

@@ -40,7 +40,49 @@ class ProductoControllerTest extends TestCase
         $response = $this->get('/productos');
 
         $response->assertStatus(200);
-        $response->assertViewHas('productos');
+    }
+
+    public function test_data_devuelve_productos_para_datatables()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Harina Pan']);
+        Categoria::factory()->create(['nombre' => 'Harinas']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&order[0][column]=0&order[0][dir]=asc');
+
+        $response->assertStatus(200);
+        $response->assertJson(['draw' => 1]);
+        $response->assertJsonStructure(['recordsTotal', 'recordsFiltered', 'data']);
+        $response->assertJsonFragment(['nombre' => 'Harina Pan']);
+    }
+
+    public function test_data_permite_buscar_por_nombre()
+    {
+        Producto::factory()->create(['nombre' => 'Harina Pan']);
+        Producto::factory()->create(['nombre' => 'Azúcar Morena']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=Harina');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Harina Pan', $data[0]['nombre']);
+    }
+
+    public function test_data_ordena_por_categoria()
+    {
+        $z = Categoria::factory()->create(['nombre' => 'Zeta']);
+        $a = Categoria::factory()->create(['nombre' => 'Alfa']);
+        Producto::factory()->create(['nombre' => 'Prod Z', 'categoria_id' => $z->id]);
+        Producto::factory()->create(['nombre' => 'Prod A', 'categoria_id' => $a->id]);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&order[0][column]=2&order[0][dir]=asc');
+
+        $data = $response->json('data');
+        $this->assertCount(2, $data);
+        $this->assertEquals('Prod A', $data[0]['nombre']);
+        $this->assertEquals('Prod Z', $data[1]['nombre']);
     }
 
     public function test_create_muestra_formulario()

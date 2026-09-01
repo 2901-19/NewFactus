@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Categoria;
 use App\Models\Configuracion;
 use App\Models\Producto;
+use App\Models\ProductoPresentacion;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -127,6 +129,26 @@ class HerramientasTest extends TestCase
         $response = $this->get('/herramientas/precios');
 
         $response->assertStatus(200);
+    }
+
+    public function test_precios_filtra_por_categoria()
+    {
+        $categoria = Categoria::factory()->create(['nombre' => 'Harinas']);
+        $harina = Producto::factory()->create(['nombre' => 'Harina Pan', 'categoria_id' => $categoria->id]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'activa' => true,
+        ]);
+        Producto::factory()->create(['nombre' => 'Azúcar', 'categoria_id' => null]);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios?categoria_id='.$categoria->id);
+
+        $response->assertStatus(200);
+        $response->assertSee('Harina Pan');
+        $response->assertDontSee('Azúcar');
     }
 
     public function test_importar_tasas_repetidas_conserva_historial()

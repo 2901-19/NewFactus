@@ -12,10 +12,59 @@ class AjusteController extends Controller
 {
     public function editarPrecios()
     {
-        $productos = Producto::whereNull('deleted_at')->with(['categoria', 'presentaciones'])->get();
         $tasas = TasaCambio::mapaMontos();
 
-        return view('productos.ajustar-precios', compact('productos', 'tasas'));
+        return view('productos.ajustar-precios', compact('tasas'));
+    }
+
+    public function preciosData(Request $request)
+    {
+        $draw = (int) $request->integer('draw');
+        $start = (int) $request->integer('start');
+        $length = $request->integer('length');
+
+        $query = Producto::whereNull('deleted_at')->with('categoria');
+
+        $search = trim((string) $request->input('search.value'));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(nombre) LIKE ?', ['%'.mb_strtolower($search).'%'])
+                    ->orWhereHas('categoria', fn ($c) => $c->whereRaw('LOWER(categorias.nombre) LIKE ?', ['%'.mb_strtolower($search).'%']));
+            });
+        }
+
+        $total = (clone $query)->count();
+
+        if ($length < 0) {
+            $length = $total;
+        }
+
+        $query->orderBy('nombre');
+
+        $productos = $query->offset($start)->limit($length ?: 100)->get();
+
+        $data = $productos->map(function ($producto) {
+            return [
+                'producto_id' => $producto->id,
+                'costo_usd' => (float) $producto->costo_usd,
+                'nombre' => e($producto->nombre),
+                'categoria' => $producto->categoria?->nombre ? e($producto->categoria->nombre) : '-',
+                'presentaciones' => $producto->presentaciones->map(fn ($p) => [
+                    'id' => $p->id,
+                    'nombre' => $p->nombre,
+                    'margen' => (float) $p->margen,
+                    'factor_conversion' => (float) $p->factor_conversion,
+                    'fuente_tasa' => $p->fuente_tasa,
+                ])->toArray(),
+            ];
+        });
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => Producto::whereNull('deleted_at')->count(),
+            'recordsFiltered' => $total,
+            'data' => $data,
+        ]);
     }
 
     public function guardarPrecio(Request $request, Producto $producto)

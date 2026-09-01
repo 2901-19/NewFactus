@@ -33,67 +33,6 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($productos as $p)
-            <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
-                <td class="text-start">{{ $p->nombre }}</td>
-                <td>
-                    @if ($p->imagen_url)
-                        <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
-                    @else
-                        <span class="text-muted sin-ref">Sin referencia</span>
-                    @endif
-                </td>
-                <td>{{ $p->categoria->nombre ?? '-' }}</td>
-                <td>
-                    @if ($p->controla_inventario)
-                        {{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}
-                    @else
-                        <span class="badge bg-secondary">Sin inventario</span>
-                    @endif
-                </td>
-                <td>
-                    @forelse ($p->presentaciones as $pres)
-                        @if ($pres->activa)
-                        @php $tasaPres = $tasas->get($pres->fuente_tasa); @endphp
-                        <div class="small text-nowrap">
-                            {{ $pres->nombre }}:
-                            @if ($tasaPres)
-                                <span class="fw-bold">Bs {{ number_format($pres->precio_usd * $tasaPres, 2) }}</span>
-                                <small class="text-muted">(${{ number_format($pres->precio_usd, 2) }})</small>
-                            @else
-                                <span class="badge bg-danger" title="Configure la tasa '{{ $pres->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
-                            @endif
-                        </div>
-                        @endif
-                    @empty
-                        <span class="text-muted">Sin precios</span>
-                    @endforelse
-                </td>
-                <td>
-                    @if ($p->trashed())
-                        <span class="badge bg-secondary">Inactivo</span>
-                    @else
-                        <span class="badge bg-success">{{ $p->estado }}</span>
-                    @endif
-                </td>
-                <td>
-                    @unless ($p->trashed())
-                        <a href="{{ route('productos.edit', $p->id) }}" class="btn btn-sm btn-warning">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                    @endunless
-                    @if ($p->trashed())
-                    <button class="btn btn-sm btn-success btn-restore" data-url="{{ route('productos.restore', $p->id) }}">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </button>
-                    @else
-                    <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('productos.destroy', $p->id) }}">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                    @endif
-                </td>
-            </tr>
-            @endforeach
         </tbody>
     </table>
 </div>
@@ -103,7 +42,30 @@
 document.addEventListener('DOMContentLoaded', function () {
     if ($.fn.DataTable) {
         $('#dt-productos').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '/productos/data',
+                data: (d) => ({
+                    draw: d.draw,
+                    start: d.start !== undefined ? d.start : 0,
+                    length: d.length,
+                    ['search[value]']: d.search ? d.search.value : '',
+                    ['order[0][column]']: d.order && d.order[0] ? d.order[0].column : 0,
+                    ['order[0][dir]']: d.order && d.order[0] ? d.order[0].dir : 'asc',
+                }),
+            },
+            columns: [
+                { data: 'nombre', className: 'text-start' },
+                { data: 'ref' },
+                { data: 'categoria' },
+                { data: 'existencia' },
+                { data: 'precios' },
+                { data: 'estado' },
+                { data: 'acciones', orderable: false },
+            ],
             columnDefs: [{ orderable: false, targets: -1 }],
+            order: [[0, 'asc']],
         });
     }
     $(document).on('click', '.btn-delete', function () {

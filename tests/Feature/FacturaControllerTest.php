@@ -127,16 +127,41 @@ class FacturaControllerTest extends TestCase
         $response->assertViewHas(['productos', 'clientes']);
     }
 
-    public function test_pos_muestra_una_fila_por_presentacion()
+    public function test_pos_catalogo_json_reducido()
     {
         $this->actingAs($this->cajero);
 
         $response = $this->get('/pos');
 
         $response->assertStatus(200);
-        $response->assertSee('Presentación');
-        $response->assertSee('data-presentacion="'.$this->presentacionUnidad->id.'"', false);
-        $response->assertSee('data-presentacion="'.$this->presentacionMayor->id.'"', false);
+        $response->assertViewHas('productos');
+
+        $productos = $response->viewData('productos');
+        $this->assertIsIterable($productos);
+
+        $producto = collect($productos)->first(fn ($p) => $p['id'] === $this->producto->id);
+        $this->assertNotNull($producto);
+        $this->assertEqualsCanonicalizing(
+            ['id', 'nombre', 'controla_inventario', 'stock_actual', 'unidad_medida', 'impuesto', 'presentaciones'],
+            array_keys($producto)
+        );
+    }
+
+    public function test_pos_enpoint_lista_presentaciones()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->getJson('/pos/productos?start=0&length=15&draw=1');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'draw', 'recordsTotal', 'recordsFiltered', 'data',
+        ]);
+
+        $data = $response->json('data');
+        $ids = array_column($data, 'presentacion_id');
+        $this->assertContains($this->presentacionUnidad->id, $ids);
+        $this->assertContains($this->presentacionMayor->id, $ids);
     }
 
     public function test_pos_marca_producto_sin_tasa_configurada()
@@ -160,12 +185,16 @@ class FacturaControllerTest extends TestCase
         $this->actingAs($this->cajero);
 
         $response = $this->get('/pos');
-
         $response->assertStatus(200);
         $response->assertSee('Producto Sin Tasa');
-        $response->assertSee('Sin tasa');
-        $response->assertDontSee('Bs 5.00');
         $response->assertSee('"fuente_tasa":"paralelo"', false);
+
+        $dataResponse = $this->getJson('/pos/productos?start=0&length=50&draw=1');
+        $dataResponse->assertStatus(200);
+        $data = $dataResponse->json('data');
+        $sinTasa = collect($data)->first(fn ($f) => $f['nombre'] === 'Producto Sin Tasa');
+        $this->assertNotNull($sinTasa);
+        $this->assertFalse($sinTasa['fila_ok']);
     }
 
     public function test_store_crea_factura_contado()

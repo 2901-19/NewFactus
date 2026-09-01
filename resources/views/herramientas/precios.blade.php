@@ -2,12 +2,18 @@
 @section('titulo', 'Lista de Precios')
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <p class="text-muted mb-0">{{ $productos->count() }} productos disponibles.</p>
-    <div class="d-flex gap-2">
-        <a href="{{ route('herramientas.precios.pdf') }}" class="btn btn-danger">
+    <p class="text-muted mb-0">{{ $productos->count() }} productos disponibles{{ $categoriaId ? ' en la categoría seleccionada' : '' }}.</p>
+    <div class="d-flex gap-2 align-items-center">
+        <select id="filtroCategoria" class="form-select form-select-sm" style="width:auto">
+            <option value="">Todas las categorías</option>
+            @foreach ($categorias as $c)
+            <option value="{{ $c->id }}" @selected($categoriaId == $c->id)>{{ $c->nombre }}</option>
+            @endforeach
+        </select>
+        <a href="{{ route('herramientas.precios.pdf', ['categoria_id' => $categoriaId]) }}" class="btn btn-danger">
             <i class="bi bi-filetype-pdf"></i> Descargar PDF
         </a>
-        <a href="{{ route('herramientas.precios', ['export' => 'json']) }}" class="btn btn-success">
+        <a href="{{ route('herramientas.precios', ['export' => 'json', 'categoria_id' => $categoriaId]) }}" class="btn btn-success">
             <i class="bi bi-filetype-json"></i> Descargar JSON
         </a>
     </div>
@@ -53,6 +59,16 @@ document.addEventListener('DOMContentLoaded', function () {
         language: window.DataTableSpanish,
         order: [[0, 'asc']],
         pageLength: 25,
+    });
+    $('#filtroCategoria').on('change', function () {
+        const value = $(this).val();
+        const url = new URL(window.location.href);
+        if (value) {
+            url.searchParams.set('categoria_id', value);
+        } else {
+            url.searchParams.delete('categoria_id');
+        }
+        window.location.href = url.toString();
     });
 });
 </script>

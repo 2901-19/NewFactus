@@ -17,7 +17,7 @@
 </head>
 <body>
     <h1>FACTUS Esperanza Veliz</h1>
-    <p class="fecha">Lista de Precios - Generado el {{ $fecha }}</p>
+    <p class="fecha">Lista de Precios{{ $categoria ? ' - '.$categoria->nombre : '' }} - Generado el {{ $fecha }}</p>
     <table>
         <thead>
             <tr>

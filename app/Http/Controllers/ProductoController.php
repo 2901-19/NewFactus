@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Categoria;
 use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\TasaCambio;
@@ -24,10 +25,118 @@ class ProductoController extends Controller
 
     public function index()
     {
-        $productos = Producto::withTrashed()->with(['categoria', 'presentaciones'])->get();
-        $tasas = TasaCambio::mapaMontos();
+        return view('productos.index');
+    }
 
-        return view('productos.index', compact('productos', 'tasas'));
+    public function data(Request $request)
+    {
+        $draw = (int) $request->integer('draw');
+        $start = (int) $request->integer('start');
+        $length = $request->integer('length');
+
+        if ($length < 0) {
+            $length = Producto::withTrashed()->count();
+        }
+
+        $query = Producto::withTrashed()->with(['categoria', 'presentaciones']);
+
+        $search = trim((string) $request->input('search.value'));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(nombre) LIKE ?', ['%'.mb_strtolower($search).'%'])
+                    ->orWhereHas('categoria', fn ($c) => $c->whereRaw('LOWER(categorias.nombre) LIKE ?', ['%'.mb_strtolower($search).'%']));
+            });
+        }
+
+        $total = (clone $query)->count();
+
+        $columns = ['nombre', 'nombre', 'categoria.nombre', 'nombre', 'nombre', 'estado', 'nombre'];
+        $orderColumn = $request->integer('order.0.column');
+        $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+
+        $order = $columns[$orderColumn] ?? 'nombre';
+        if ($order === 'categoria.nombre') {
+            $query->orderBy(Categoria::select('nombre')->whereColumn('categorias.id', 'productos.categoria_id'), $orderDir);
+        } elseif ($order === 'estado') {
+            $query->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END '.$orderDir);
+        } else {
+            $query->orderBy('nombre', $orderDir);
+        }
+
+        $productos = $query->offset($start)->limit($length ?: 100)->get();
+
+        $tasas = TasaCambio::mapaMontos();
+        $data = $productos->map(function ($producto) use ($tasas) {
+            return [
+                'nombre' => e($producto->nombre),
+                'ref' => $producto->imagen_url
+                    ? '<img src="'.e($producto->imagen_url).'" alt="'.e($producto->nombre).'" class="thumb">'
+                    : '<span class="text-muted sin-ref">Sin referencia</span>',
+                'categoria' => $producto->categoria?->nombre ? e($producto->categoria->nombre) : '-',
+                'existencia' => $this->celdaExistencia($producto),
+                'precios' => $this->celdaPrecios($producto, $tasas),
+                'estado' => $producto->trashed()
+                    ? '<span class="badge bg-secondary">Inactivo</span>'
+                    : '<span class="badge bg-success">'.e($producto->estado).'</span>',
+                'acciones' => $this->celdaAcciones($producto),
+                'DT_RowClass' => $producto->trashed() ? 'table-secondary text-muted' : '',
+            ];
+        });
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => Producto::withTrashed()->count(),
+            'recordsFiltered' => $total,
+            'data' => $data,
+        ]);
+    }
+
+    private function celdaExistencia(Producto $producto): string
+    {
+        if (! $producto->controla_inventario) {
+            return '<span class="badge bg-secondary">Sin inventario</span>';
+        }
+
+        return number_format($producto->stock_actual, 2, ',', '.').' '.e($producto->unidad_medida ?? 'unidad');
+    }
+
+    private function celdaPrecios(Producto $producto, $tasas): string
+    {
+        $activas = $producto->presentaciones->filter(fn ($pres) => $pres->activa);
+
+        if ($activas->isEmpty()) {
+            return '<span class="text-muted">Sin precios</span>';
+        }
+
+        $html = '';
+        foreach ($activas as $pres) {
+            $tasa = $tasas->get($pres->fuente_tasa);
+            $html .= '<div class="small text-nowrap">'.e($pres->nombre).': ';
+            if ($tasa) {
+                $html .= '<span class="fw-bold">Bs '.number_format($pres->precio_usd * $tasa, 2).'</span>'
+                    .' <small class="text-muted">($'.number_format($pres->precio_usd, 2).')</small>';
+            } else {
+                $html .= '<span class="badge bg-danger" title="Configure la tasa \''.e($pres->fuente_tasa).'\' en Tasas de Cambio">Sin tasa</span>';
+            }
+            $html .= '</div>';
+        }
+
+        return $html;
+    }
+
+    private function celdaAcciones(Producto $producto): string
+    {
+        $html = '';
+        if (! $producto->trashed()) {
+            $html .= '<a href="'.route('productos.edit', $producto->id).'" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a> ';
+        }
+        if ($producto->trashed()) {
+            $html .= '<button class="btn btn-sm btn-success btn-restore" data-url="'.route('productos.restore', $producto->id).'"><i class="bi bi-arrow-counterclockwise"></i></button>';
+        } else {
+            $html .= '<button class="btn btn-sm btn-danger btn-delete" data-url="'.route('productos.destroy', $producto->id).'"><i class="bi bi-trash"></i></button>';
+        }
+
+        return $html;
     }
 
     public function create()

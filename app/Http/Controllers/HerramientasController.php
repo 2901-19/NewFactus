@@ -14,6 +14,7 @@ use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class HerramientasController extends Controller
 {
@@ -451,11 +452,9 @@ class HerramientasController extends Controller
 
     public function precios(Request $request)
     {
-        $productos = Producto::whereNull('deleted_at')
-            ->where('estado', 'disponible')
-            ->with(['presentaciones', 'impuesto'])
-            ->orderBy('nombre')
-            ->get();
+        $categoriaId = $request->integer('categoria_id');
+        $productos = $this->productosParaPrecios($categoriaId);
+        $categorias = Categoria::orderBy('nombre')->get();
 
         $tasas = TasaCambio::mapaMontos();
 
@@ -478,24 +477,33 @@ class HerramientasController extends Controller
             return response()->json($data);
         }
 
-        return view('herramientas.precios', compact('productos', 'tasas'));
+        return view('herramientas.precios', compact('productos', 'tasas', 'categorias', 'categoriaId'));
     }
 
-    public function preciosPdf()
+    public function preciosPdf(Request $request)
     {
-        $productos = Producto::whereNull('deleted_at')
-            ->where('estado', 'disponible')
-            ->with(['presentaciones', 'impuesto'])
-            ->orderBy('nombre')
-            ->get();
+        $categoriaId = $request->integer('categoria_id');
+        $productos = $this->productosParaPrecios($categoriaId);
+        $categoria = $categoriaId ? Categoria::find($categoriaId) : null;
 
         $tasas = TasaCambio::mapaMontos();
         $fecha = now()->format('d/m/Y H:i');
 
-        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha'));
+        $sufijo = $categoria ? '_'.Str::slug($categoria->nombre) : '';
+        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha', 'categoria'));
         $pdf->setPaper('letter', 'portrait');
 
-        return $pdf->download('lista_precios_'.now()->format('Y_m_d').'.pdf');
+        return $pdf->download('lista_precios'.$sufijo.'_'.now()->format('Y_m_d').'.pdf');
+    }
+
+    private function productosParaPrecios(int $categoriaId)
+    {
+        return Producto::whereNull('deleted_at')
+            ->where('estado', 'disponible')
+            ->when($categoriaId, fn ($q) => $q->where('categoria_id', $categoriaId))
+            ->with(['presentaciones', 'impuesto'])
+            ->orderBy('nombre')
+            ->get();
     }
 
     // ========== CONFIGURACIÓN DEL NEGOCIO ==========
@@ -521,6 +529,7 @@ class HerramientasController extends Controller
                 ['clave' => $clave],
                 ['valor' => $request->$clave]
             );
+            Configuracion::olvidar($clave);
         }
 
         return back()->with('success', 'Configuración guardada correctamente.');
@@ -546,6 +555,7 @@ class HerramientasController extends Controller
                 ['clave' => $clave],
                 ['valor' => $valor]
             );
+            Configuracion::olvidar($clave);
         }
 
         return back()->with('success', 'Recordatorio de tasa guardado correctamente.');

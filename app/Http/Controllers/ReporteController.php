@@ -129,9 +129,9 @@ class ReporteController extends Controller
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
             ->where('unidad_medida', 'unidad')
-            ->get()
-            ->filter(fn ($p) => (float) $p->stock_actual <= CatalogoService::UMBRAL_STOCK_BAJO)
-            ->sortBy('stock_actual');
+            ->where('stock_actual', '<=', CatalogoService::UMBRAL_STOCK_BAJO)
+            ->orderBy('stock_actual')
+            ->get();
 
         return view('reportes.stock', compact('productos'));
     }

@@ -44,9 +44,10 @@ class DashboardController extends Controller
         $productosStockBajo = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
             ->where('unidad_medida', 'unidad')
-            ->get()
-            ->filter(fn ($p) => (float) $p->stock_actual <= CatalogoService::UMBRAL_STOCK_BAJO)
-            ->take(10);
+            ->where('stock_actual', '<=', CatalogoService::UMBRAL_STOCK_BAJO)
+            ->orderBy('stock_actual')
+            ->take(10)
+            ->get();
 
         $totalProductos = Producto::whereNull('deleted_at')->count();
         $totalClientes = Cliente::count();
