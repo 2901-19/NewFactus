@@ -2,8 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Categoria;
-use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use Database\Seeders\TasaReferenciaSeeder;
@@ -17,8 +15,6 @@ class MigrarInventarioViejo extends Command
                             {--force : Eliminar productos existentes antes de migrar}';
 
     protected $description = 'Migrar inventario del sistema viejo (tabla inventories) al nuevo esquema de productos y presentaciones';
-
-    private array $categoriasMap = [];
 
     public function handle(): int
     {
@@ -55,43 +51,39 @@ class MigrarInventarioViejo extends Command
 
         $this->info('  Parsing SQL... '.count($registros).' registros encontrados');
 
-        // 2. Sembrar tasas de referencia
+        // 3. Sembrar tasas de referencia
         (new TasaReferenciaSeeder)->run();
         $this->line('  Tasas de referencia verificadas (bcv, usdt, promedio)');
 
-        // 3. Crear categorías
-        $this->crearCategorias($registros);
-
-        // 4. Crear impuesto IVA si hay productos con iva=1
-        $this->crearImpuestoIva($registros);
-
-        // 5. Si --force, eliminar productos existentes
+        // 4. Si --force, eliminar datos existentes (catálogo, categorías e impuestos)
         if ($this->option('force')) {
             $this->info('  Eliminando productos existentes...');
             DB::statement('DELETE FROM producto_presentaciones');
             DB::statement('DELETE FROM productos');
+            DB::statement('DELETE FROM categorias');
+            DB::statement('DELETE FROM impuestos');
         }
 
-        // 6. Detectar pares normal+Mayor
-        $grupos = $this->agruparPorDescripcion($registros);
+        // 5. Detectar pares normal+Mayor
+        $grupos = $this->agruparPorNombre($registros);
         $paresDetectados = collect($grupos)->filter(fn ($g) => count($g) > 1)->count();
         $this->line('  Detectando pares normal+Mayor... '.$paresDetectados.' pares encontrados');
 
-        // 7. Crear productos y presentaciones
+        // 6. Crear productos y presentaciones
         $this->newLine();
         $creados = 0;
         $conMayor = 0;
         $saltados = 0;
 
         DB::transaction(function () use ($grupos, &$creados, &$conMayor, &$saltados) {
-            foreach ($grupos as $descripcionNormalizada => $grupo) {
-                $normal = collect($grupo)->first(fn ($r) => ! $this->esMayor($r['description']));
-                $mayor = collect($grupo)->first(fn ($r) => $this->esMayor($r['description']));
+            foreach ($grupos as $nombreNormalizado => $grupo) {
+                $normal = collect($grupo)->first(fn ($r) => ! $this->esMayor($r));
+                $mayor = collect($grupo)->first(fn ($r) => $this->esMayor($r));
 
                 // Usar el registro normal como base; si solo hay Mayor, usar ese
                 $base = $normal ?? $mayor;
 
-                $nombreProducto = $base['description'];
+                $nombreProducto = $this->componerNombre($base['name'], $base['description']);
 
                 // Verificar si ya existe (idempotencia)
                 if (Producto::where('nombre', $nombreProducto)->exists()) {
@@ -102,26 +94,23 @@ class MigrarInventarioViejo extends Command
 
                 $producto = Producto::create([
                     'nombre' => $nombreProducto,
-                    'categoria_id' => $this->categoriasMap[$base['name']] ?? null,
+                    'categoria_id' => null,
                     'descripcion' => null,
-                    'imagen' => $this->limpiarImagen($base['image']),
+                    'imagen' => null,
                     'unidad_medida' => 'unidad',
-                    'impuesto_id' => $base['iva'] == '1' ? $this->impuestoIvaId() : null,
-                    'costo_usd' => $this->calcularCosto($base['precie_unit'], $base['porcentage_profit']),
+                    'impuesto_id' => null,
+                    'costo_usd' => $this->calcularCosto($base['precie_usd'], $base['porcentage']),
                     'estado' => $base['status'] === 'Disponible' ? 'disponible' : 'no_disponible',
                 ]);
 
                 // Presentación Unidad (solo si hay registro normal)
                 if ($normal) {
-                    $margenNormal = round((float) $base['porcentage_profit'] * 100, 2);
-                    $fuenteTasa = $this->mapearFuenteTasa($base['daily_dollar']);
-
                     ProductoPresentacion::create([
                         'producto_id' => $producto->id,
                         'nombre' => 'Unidad',
                         'factor_conversion' => 1,
-                        'margen' => $margenNormal,
-                        'fuente_tasa' => $fuenteTasa,
+                        'margen' => round((float) $base['porcentage'], 2),
+                        'fuente_tasa' => $this->mapearFuenteTasa($base['daily_dollar']),
                         'precio_usd' => (float) $base['precie_unit'],
                         'activa' => true,
                     ]);
@@ -129,13 +118,11 @@ class MigrarInventarioViejo extends Command
 
                 // Presentación Mayor (si existe)
                 if ($mayor) {
-                    $margenMayor = round((float) $mayor['porcentage_profit'] * 100, 2);
-
                     ProductoPresentacion::create([
                         'producto_id' => $producto->id,
                         'nombre' => 'Mayor',
-                        'factor_conversion' => (int) $base['units_package'] ?: 1,
-                        'margen' => $margenMayor,
+                        'factor_conversion' => (int) $mayor['units_package'] ?: 1,
+                        'margen' => round((float) $mayor['porcentage'], 2),
                         'fuente_tasa' => $this->mapearFuenteTasa($mayor['daily_dollar']),
                         'precio_usd' => (float) $mayor['precie_unit'],
                         'activa' => true,
@@ -150,7 +137,7 @@ class MigrarInventarioViejo extends Command
             }
         });
 
-        // 8. Resumen
+        // 7. Resumen
         $this->newLine();
         $this->info('  Productos creados: '.$creados);
         if ($conMayor > 0) {
@@ -264,52 +251,12 @@ class MigrarInventarioViejo extends Command
         return $valores;
     }
 
-    private function crearCategorias(array $registros): void
-    {
-        $nombres = array_unique(array_column($registros, 'name'));
-        sort($nombres);
-
-        $existentes = Categoria::pluck('nombre')->flip()->toArray();
-        $creadas = 0;
-
-        foreach ($nombres as $nombre) {
-            if (! isset($existentes[$nombre])) {
-                $cat = Categoria::create(['nombre' => $nombre]);
-                $existentes[$nombre] = $cat->id;
-                $creadas++;
-            }
-        }
-
-        // Reconstruir mapa completo (existentes + nuevas)
-        $this->categoriasMap = Categoria::pluck('id', 'nombre')->toArray();
-
-        $this->line('  Categorías: '.$creadas.' creadas, '.count($existentes).' total');
-    }
-
-    private function crearImpuestoIva(array $registros): void
-    {
-        $hayIva = collect($registros)->contains(fn ($r) => $r['iva'] === '1');
-
-        if ($hayIva && ! Impuesto::where('nombre', 'IVA')->exists()) {
-            Impuesto::create([
-                'nombre' => 'IVA',
-                'porcentaje' => 16.00,
-            ]);
-            $this->line('  Impuesto IVA creado (16%)');
-        }
-    }
-
-    private function impuestoIvaId(): ?int
-    {
-        return Impuesto::where('nombre', 'IVA')->value('id');
-    }
-
-    private function agruparPorDescripcion(array $registros): array
+    private function agruparPorNombre(array $registros): array
     {
         $grupos = [];
 
         foreach ($registros as $registro) {
-            $clave = $this->normalizarDescripcion($registro['description']);
+            $clave = mb_strtolower($this->componerNombre($registro['name'], $registro['description']));
 
             if (! isset($grupos[$clave])) {
                 $grupos[$clave] = [];
@@ -321,54 +268,60 @@ class MigrarInventarioViejo extends Command
         return $grupos;
     }
 
-    private function normalizarDescripcion(string $descripcion): string
+    private function componerNombre(string $name, string $description): string
     {
-        // Quitar " Mayor" al final (insensible a mayúsculas), normalizar espacios
-        $normalizada = preg_replace('/\s+Mayor\s*$/i', '', $descripcion);
+        $tokens = array_merge(
+            $this->tokens($description),
+            $this->tokens($name)
+        );
 
-        return trim(mb_strtolower($normalizada));
+        $usadas = [];
+        $nombre = [];
+
+        foreach ($tokens as $token) {
+            $clave = mb_strtolower($token);
+
+            if ($clave === '' || isset($usadas[$clave])) {
+                continue;
+            }
+
+            $usadas[$clave] = true;
+            $nombre[] = $token;
+        }
+
+        return trim(preg_replace('/\s+/', ' ', implode(' ', $nombre)));
     }
 
-    private function esMayor(string $descripcion): bool
+    private function tokens(string $texto): array
     {
-        return preg_match('/\bMayor\s*$/i', trim($descripcion)) === 1;
+        $sinMayor = trim(preg_replace('/\bMayor\b/i', '', $texto));
+
+        return preg_split('/\s+/', $sinMayor) ?: [];
     }
 
-    private function calcularCosto(string $precieUnit, string $profit): float
+    private function esMayor(array $registro): bool
     {
-        $precio = (float) $precieUnit;
-        $ganancia = (float) $profit;
+        return preg_match('/\bMayor\b/i', $registro['name'].' '.$registro['description']) === 1;
+    }
 
-        if ($precio <= 0 || $ganancia < 0) {
+    private function calcularCosto(string $precieUsd, string $porcentage): float
+    {
+        $precio = (float) $precieUsd;
+        $margen = (float) $porcentage;
+
+        if ($precio <= 0 || $margen <= 0) {
             return 0;
         }
 
-        $divisor = 1 + $ganancia;
-
-        if ($divisor <= 0) {
-            return 0;
-        }
-
-        return round($precio / $divisor, 2);
+        return max(0, round($precio * (1 - $margen / 100), 2));
     }
 
     private function mapearFuenteTasa(string $dailyDollar): string
     {
         return match ($dailyDollar) {
+            '0' => 'bcv',
             '1' => 'usdt',
-            '2' => 'promedio',
-            default => 'bcv',
+            default => 'promedio',
         };
-    }
-
-    private function limpiarImagen(string $image): ?string
-    {
-        $image = trim($image);
-
-        if ($image === '' || $image === '../uploads/') {
-            return null;
-        }
-
-        return preg_replace('#^\.\.\/uploads\/#', '', $image);
     }
 }

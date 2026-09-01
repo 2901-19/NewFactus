@@ -78,8 +78,10 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 
 - Comando artisan: `php artisan migrar:inventario-viejo --archivo="ruta/archivo.sql" [--force]`
 - Parsea INSERT SQL de la tabla vieja `inventories` (15 columnas por fila, encoding Latin1/Win-1252 auto-detectado).
-- Mapeo: `name` → categoría, `description` → nombre producto, `status` → estado, `iva` 0/1 → impuesto IVA (16%), `daily_dollar` 0/1/2 → fuente_tasa (bcv/usdt/promedio), `porcentage_profit` → margen, `precie_unit / (1+profit)` → costo_usd. **Stock se excluye** (queda en 0; el conteo es manual).
-- Fusiona pares normal + "Mayor" al final en 1 producto con 2 presentaciones (Unidad + Mayor con `factor_conversion = units_package`). Solo-Mayor se crea como 1 presentación "Mayor".
-- `--force` trunca productos y presentaciones antes de re-ejecutar. Es idempotente sin `--force` (salta productos ya existentes por `nombre`).
+- **Nombre producto**: combinación deduplicada de `description` + `name` (tokens primero de `description`, luego `name`, palabras repetidas solo una vez, case-insensitive; se quita la palabra `Mayor` antes). Ej: `Pepsi Cola 2L` + `Refresco` → `Pepsi Cola 2L Refresco`. La clave de agrupación usa el mismo nombre normalizado, así normal↔Mayor se emparejan aunque `Mayor` venga en `name` o en `description`.
+- **Categoría, imagen e impuesto quedan vacíos** (null): no se crean categorías ni IVA; `estado` viene de `status` (`Disponible`→`disponible`).
+- **Costo**: regla inversa `round(precie_usd * (1 - porcentage/100), 2)` (mín 0, 0 si falta precie_usd). `unidad_medida='unidad'`, `stock_actual=0` (conteo manual). Precios `precie_unit` van a la presentación.
+- **Presentaciones**: fila normal → `Unidad` (factor 1); fila con palabra `Mayor` en `name` o `description` → presentación extra `Mayor` (`factor_conversion = units_package` de esa fila). Solo-Mayor se crea como 1 presentación "Mayor". `margen = porcentage` en ambas; `fuente_tasa` mapea `daily_dollar`: `0`→bcv, `1`→usdt, `2`→promedio.
+- `--force` trunca `producto_presentaciones`, `productos`, `categorias` e `impuestos` antes de re-ejecutar. Es idempotente sin `--force` (salta productos ya existentes por `nombre`).
 - Seeder: `TasaReferenciaSeeder` crea filas iniciales para tipos `bcv`, `usdt`, `promedio` en `tasa_cambios` (monto 0) y fija `Configuracion.tasa_referencia = 'bcv'`.
-- Tests: `tests/Feature/MigrarInventarioViejoTest.php` (14 tests: parseo, categorías, IVA, fusiones, fuente_tasa, costo, idempotencia, force, encoding, imagen).
+- Tests: `tests/Feature/MigrarInventarioViejoTest.php` (14 tests: parseo, nombre dedup, fusión normal+Mayor en `name`/`description`, categoría/imagen/impuesto vacíos, costo, fuente_tasa, idempotencia, force, encoding).
