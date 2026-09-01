@@ -4,6 +4,10 @@
 #   1) mata el arbol del navegador,
 #   2) cierra la sesion del usuario (POST /lanzador/cerrar-sesion),
 #   3) mata el arbol de PHP.
+# Ademas:
+#   - Verifica que PostgreSQL este encendida antes de arrancar.
+#   - Vigila el servidor: si PHP muere con la ventana abierta, lo reinicia
+#     con reintentos y refresca la ventana en su lugar (sin recargarla).
 # Si una instancia anterior quedo huerfana (cierre forzado), la limpia al
 # iniciar para que el puerto nunca quede bloqueado.
 
@@ -12,13 +16,14 @@ $ErrorActionPreference = 'Stop'
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configPath = Join-Path $base 'config.json'
 
-$config = @{ port = 8000; phpPath = $null; appPath = $null; browser = 'auto' }
+$config = @{ port = 8000; phpPath = $null; appPath = $null; browser = 'auto'; postgresPort = 5432 }
 if (Test-Path $configPath) {
     $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
-    if ($cfg.port)    { $config.port    = [int]$cfg.port }
-    if ($cfg.phpPath) { $config.phpPath = [string]$cfg.phpPath }
-    if ($cfg.appPath) { $config.appPath = [string]$cfg.appPath }
-    if ($cfg.browser) { $config.browser = [string]$cfg.browser }
+    if ($cfg.port)         { $config.port         = [int]$cfg.port }
+    if ($cfg.phpPath)      { $config.phpPath      = [string]$cfg.phpPath }
+    if ($cfg.appPath)      { $config.appPath      = [string]$cfg.appPath }
+    if ($cfg.browser)      { $config.browser      = [string]$cfg.browser }
+    if ($cfg.postgresPort) { $config.postgresPort = [int]$cfg.postgresPort }
 }
 
 $port = $config.port
@@ -104,6 +109,46 @@ function Abrir-Ventana([string]$url) {
     return Start-Process -FilePath $navegadorPath -ArgumentList @("--app=$url", "--user-data-dir=$profileDir", '--start-maximized', '--no-first-run', '--no-default-browser-check') -PassThru
 }
 
+# Refresca la pagina en la ventana ya abierta (F5) sin cerrarla ni recargarla.
+function Recargar-Ventana([int]$id) {
+    try {
+        Add-Type -AssemblyName Microsoft.VisualBasic
+        [Microsoft.VisualBasic.Interaction]::AppActivate($id) | Out-Null
+        Start-Sleep -Milliseconds 300
+        $wsh = New-Object -ComObject WScript.Shell
+        $wsh.SendKeys('{F5}')
+    } catch { }
+}
+
+# Arranca `php artisan serve` y espera a que responda. Devuelve el proceso.
+function Iniciar-Servidor() {
+    $php = Localizar-Php
+    if (-not $php) { throw 'No se encontro PHP. Instala PHP 8.2+ y vuelve a abrir FACTUS.' }
+
+    $proc = Start-Process -FilePath $php -ArgumentList @('artisan', 'serve', '--host=127.0.0.1', "--port=$port") -WorkingDirectory $appDir -WindowStyle Hidden -PassThru
+    Set-Content -Path $pidFile -Value $proc.Id
+
+    $listo = $false
+    for ($i = 0; $i -lt 60; $i++) {
+        Start-Sleep -Milliseconds 500
+        $proc.Refresh()
+        if ($proc.HasExited) { break }
+        if (Test-Puerto $port) { $listo = $true; break }
+    }
+    if (-not $listo) {
+        Matar-Proc $proc.Id
+        throw 'El servidor PHP no levanto a tiempo. Revisa que PostgreSQL este encendida y vuelve a abrir FACTUS.'
+    }
+
+    return $proc
+}
+
+# Verifica que PostgreSQL esta escuchando en el puerto configurado.
+function Test-Postgres() {
+    if ($config.postgresPort -le 0) { return $true }
+    return Test-Puerto $config.postgresPort
+}
+
 try {
     # --- Auto-recuperacion: estado de la instancia anterior ---
     $phpAnterior = $null
@@ -126,25 +171,15 @@ try {
         throw "El puerto $port ya esta en uso por otro programa. Cierra ese programa y vuelve a abrir FACTUS."
     }
 
-    $php = Localizar-Php
-    if (-not $php) { throw 'No se encontro PHP. Instala PHP 8.2+ y vuelve a abrir FACTUS.' }
+    # --- Verificacion previa de PostgreSQL ---
+    if (-not (Test-Postgres)) {
+        throw "PostgreSQL no esta encendida (puerto $($config.postgresPort)). Enciende el servicio de PostgreSQL y vuelve a abrir FACTUS."
+    }
 
     # --- Arranque del servidor ---
     $token = [guid]::NewGuid().ToString('N')
-    $phpProc = Start-Process -FilePath $php -ArgumentList @('artisan', 'serve', '--host=127.0.0.1', "--port=$port") -WorkingDirectory $appDir -WindowStyle Hidden -PassThru
-    Set-Content -Path $pidFile -Value $phpProc.Id
     Set-Content -Path $tokenFile -Value $token
-
-    $listo = $false
-    for ($i = 0; $i -lt 60; $i++) {
-        Start-Sleep -Milliseconds 500
-        $phpProc.Refresh()
-        if ($phpProc.HasExited) { break }
-        if (Test-Puerto $port) { $listo = $true; break }
-    }
-    if (-not $listo) {
-        throw 'El servidor PHP no levanto a tiempo. Revisa que PostgreSQL este encendida y vuelve a abrir FACTUS.'
-    }
+    $phpProc = Iniciar-Servidor
 
     # --- Abrir la ventana y esperar a que aparezca ---
     $browser = Abrir-Ventana "$baseUrl/?_lanzador=$token"
@@ -166,6 +201,31 @@ try {
             Start-Sleep -Seconds 3
             $browser.Refresh()
             if ($browser.HasExited -or $browser.MainWindowHandle -eq 0) { break }
+        }
+
+        # Watchdog del servidor: si PHP murio con la ventana abierta, reiniciarlo.
+        if (-not (Test-Puerto $port)) {
+            $reiniciado = $false
+            for ($intento = 1; $intento -le 3; $intento++) {
+                if ($phpProc) {
+                    $phpProc.Refresh()
+                    if (-not $phpProc.HasExited) { Matar-Proc $phpProc.Id }
+                }
+                try {
+                    $phpProc = Iniciar-Servidor
+                    $reiniciado = $true
+                    break
+                } catch {
+                    Start-Sleep -Seconds 2
+                }
+            }
+
+            if (-not $reiniciado) {
+                throw 'El servidor de FACTUS fallo varias veces seguidas. Revisa PostgreSQL y vuelve a abrir FACTUS.'
+            }
+
+            Set-Content -Path $tokenFile -Value $token
+            Recargar-Ventana $browser.Id
         }
     }
 } catch {
