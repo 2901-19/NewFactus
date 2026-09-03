@@ -41,8 +41,14 @@ class FacturaController extends Controller
         DB::transaction(function () use ($factura) {
             $factura->update(['estado' => 'anulada', 'estado_credito' => null]);
 
+            $factura->load('items');
+            $productos = Producto::withTrashed()
+                ->whereIn('id', $factura->items->pluck('producto_id'))
+                ->get()
+                ->keyBy('id');
+
             foreach ($factura->items as $item) {
-                $producto = Producto::withTrashed()->find($item->producto_id);
+                $producto = $productos->get($item->producto_id);
                 if ($producto) {
                     StockService::agregar($producto, (float) $item->cantidad * (float) ($item->factor_conversion ?: 1));
                 }
@@ -74,7 +80,7 @@ class FacturaController extends Controller
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')
             ->with(['presentaciones', 'impuesto'])
             ->when($request->filled('search.value'), function ($q) use ($request) {
-                $q->where('nombre', 'ilike', '%'.$request->input('search.value').'%');
+                $q->whereRaw('LOWER(nombre) LIKE ?', ['%'.mb_strtolower($request->input('search.value')).'%']);
             })
             ->orderBy('nombre')
             ->get();

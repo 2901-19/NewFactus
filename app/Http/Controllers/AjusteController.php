@@ -23,7 +23,7 @@ class AjusteController extends Controller
         $start = (int) $request->integer('start');
         $length = $request->integer('length');
 
-        $query = Producto::whereNull('deleted_at')->with('categoria');
+        $query = Producto::whereNull('deleted_at')->with(['categoria', 'presentaciones']);
 
         $search = trim((string) $request->input('search.value'));
         if ($search !== '') {

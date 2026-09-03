@@ -143,6 +143,18 @@ class TasaCambioControllerTest extends TestCase
         $this->assertNull($filas[3]->variacion);
     }
 
+    public function test_historial_variacion_no_divide_por_cero()
+    {
+        TasaCambio::factory()->create(['tipo' => 'bcv', 'nombre' => 'BCV', 'monto' => 0]);
+        $this->post('/tasas-cambio/actualizar', ['tipo' => 'bcv', 'monto' => 60.00]);
+
+        $response = $this->get('/tasas-cambio/historial');
+
+        $response->assertStatus(200);
+        $filas = $response->viewData('historial');
+        $this->assertNull($filas[1]->variacion);
+    }
+
     public function test_actualizar_valida_campos()
     {
         $response = $this->post('/tasas-cambio/actualizar', []);

@@ -43,6 +43,10 @@ class TasaCambioController extends Controller
                 }
 
                 $anterior = (float) $filas[$j]->monto;
+                if ($anterior <= 0) {
+                    $fila->variacion = null;
+                    break;
+                }
                 $fila->variacion = round((($fila->monto - $anterior) / $anterior) * 100, 2);
                 break;
             }
