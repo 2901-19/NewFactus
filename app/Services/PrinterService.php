@@ -27,6 +27,13 @@ class PrinterService
 
             return true;
         } catch (\Exception $e) {
+            \Log::warning('PrinterService::connect falló', [
+                'tipo' => $tipo,
+                'host' => $host,
+                'port' => $port,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }
@@ -39,10 +46,10 @@ class PrinterService
 
         try {
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
-            $this->printer->setBold(true);
+            $this->printer->setEmphasis(true);
             $this->printer->setTextSize(2, 2);
             $this->printer->text("FACTUS\n");
-            $this->printer->setBold(false);
+            $this->printer->setEmphasis(false);
             $this->printer->setTextSize(1, 1);
             $this->printer->text("Esperanza Veliz\n");
             $this->printer->feed();
@@ -71,7 +78,7 @@ class PrinterService
 
             $this->printItemsSection(null, $productos, $moneda);
 
-            $this->printer->setBold(true);
+            $this->printer->setEmphasis(true);
             $this->printer->setTextSize(2, 2);
             if ($esCredito) {
                 $this->printer->text(str_pad('TOTAL USD:', 30).str_pad('$'.number_format($factura->total_usd, 2), 16)."\n");
@@ -80,7 +87,7 @@ class PrinterService
                 $this->printer->setTextSize(1, 1);
                 $this->printer->text(str_pad('TOTAL USD:', 30).str_pad('$'.number_format($factura->total_usd, 2), 16)."\n");
             }
-            $this->printer->setBold(false);
+            $this->printer->setEmphasis(false);
             $this->printer->feed();
 
             $nombresMetodo = CatalogoService::metodosPago();
@@ -99,8 +106,10 @@ class PrinterService
                 $this->printer->feed();
             }
 
+            $this->printer->setTextSize(1, 1);
+
             if ($factura->estado === 'credito') {
-                $this->printer->setBold(true);
+                $this->printer->setEmphasis(true);
                 if ($factura->estado_credito === 'cancelado') {
                     $nombreMetodo = $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago;
                     $this->printer->text("** CRÉDITO COBRADO **\n");
@@ -110,7 +119,7 @@ class PrinterService
                 } else {
                     $this->printer->text("** CRÉDITO PENDIENTE **\n");
                 }
-                $this->printer->setBold(false);
+                $this->printer->setEmphasis(false);
                 $this->printer->feed();
             }
 
@@ -122,6 +131,11 @@ class PrinterService
 
             return true;
         } catch (\Exception $e) {
+            \Log::warning('PrinterService::printReceipt falló', [
+                'factura_id' => $factura->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }
@@ -130,15 +144,15 @@ class PrinterService
     {
         if ($titulo) {
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
-            $this->printer->setBold(true);
+            $this->printer->setEmphasis(true);
             $this->printer->text("{$titulo}\n");
-            $this->printer->setBold(false);
+            $this->printer->setEmphasis(false);
             $this->printer->setJustification(Printer::JUSTIFY_LEFT);
         }
 
-        $this->printer->setBold(true);
+        $this->printer->setEmphasis(true);
         $this->printer->text(str_pad('CANT', 5).str_pad('DESC', 20).str_pad('PREC U', 10, STR_PAD_LEFT).str_pad('PREC T', 10, STR_PAD_LEFT)."\n");
-        $this->printer->setBold(false);
+        $this->printer->setEmphasis(false);
         $this->printer->text(str_repeat('-', 45)."\n");
 
         $subtotal = 0;
@@ -186,10 +200,10 @@ class PrinterService
         }
         try {
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
-            $this->printer->setBold(true);
+            $this->printer->setEmphasis(true);
             $this->printer->setTextSize(2, 2);
             $this->printer->text("PRUEBA\n");
-            $this->printer->setBold(false);
+            $this->printer->setEmphasis(false);
             $this->printer->setTextSize(1, 1);
             $this->printer->text("Impresión exitosa!\n");
             $this->printer->feed(3);

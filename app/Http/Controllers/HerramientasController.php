@@ -366,7 +366,7 @@ class HerramientasController extends Controller
         $config = [
             'tipo' => $request->tipo,
             'host' => $request->host ?? '',
-            'port' => $request->port ?? 9100,
+            'port' => (int) ($request->port ?? 9100),
             'nombre' => $request->nombre ?? '',
         ];
 
@@ -402,7 +402,10 @@ class HerramientasController extends Controller
     {
         $path = storage_path('app/impresora.json');
         if (file_exists($path)) {
-            return json_decode(file_get_contents($path), true);
+            $config = json_decode(file_get_contents($path), true);
+            $config['port'] = (int) ($config['port'] ?? 9100);
+
+            return $config;
         }
 
         return [
