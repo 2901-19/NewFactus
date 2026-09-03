@@ -27,6 +27,7 @@
                 <th>Precio Bs</th>
                 <th>Precio USD</th>
                 <th>Impuesto</th>
+                <th>Imprimir</th>
             </tr>
         </thead>
         <tbody>
@@ -45,6 +46,17 @@
                 </td>
                 <td>${{ number_format($pr->precio_usd, 2) }}</td>
                 <td>{{ $p->impuesto?->nombre ?? 'No' }}</td>
+                <td class="text-center">
+                    @if ($tasaDisponible)
+                    <a href="{{ route('herramientas.precios.imprimir', ['producto_id' => $p->id, 'presentacion_id' => $pr->id]) }}" class="btn btn-sm btn-outline-primary" title="Imprimir etiqueta de precio">
+                        <i class="bi bi-printer"></i>
+                    </a>
+                    @else
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Configure la tasa '{{ $pr->fuente_tasa }}' para imprimir la etiqueta">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                    @endif
+                </td>
             </tr>
             @endforeach
             @endforeach

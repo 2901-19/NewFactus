@@ -140,6 +140,45 @@ class PrinterService
         }
     }
 
+    public function printPrecioProducto(array $datos)
+    {
+        if (! $this->printer) {
+            return false;
+        }
+
+        try {
+            $this->printer->setJustification(Printer::JUSTIFY_CENTER);
+            $this->printer->setTextSize(1, 1);
+            $this->printer->text(($datos['negocio'] ?? '')."\n");
+            $this->printer->feed();
+
+            $this->printer->setEmphasis(true);
+            $this->printer->text($datos['producto']."\n");
+            $this->printer->setEmphasis(false);
+            $this->printer->text("Presentación: {$datos['presentacion']}\n");
+            $this->printer->feed();
+
+            $this->printer->setTextSize(2, 2);
+            $this->printer->setEmphasis(true);
+            $this->printer->text('Bs '.number_format($datos['precio_bs'], 2)."\n");
+            $this->printer->setEmphasis(false);
+            $this->printer->setTextSize(1, 1);
+
+            $this->printer->feed(3);
+            $this->printer->cut();
+            $this->printer->close();
+
+            return true;
+        } catch (\Exception $e) {
+            \Log::warning('PrinterService::printPrecioProducto falló', [
+                'producto' => $datos['producto'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     protected function printItemsSection(?string $titulo, array $items, string $moneda = 'Bs'): void
     {
         if ($titulo) {

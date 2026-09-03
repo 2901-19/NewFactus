@@ -451,6 +451,51 @@ class HerramientasController extends Controller
         return back()->with('success', 'Ticket impreso correctamente.');
     }
 
+    public function imprimirPrecioProducto(Request $request)
+    {
+        $data = $request->validate([
+            'producto_id' => 'required|exists:productos,id',
+            'presentacion_id' => 'required|exists:producto_presentaciones,id',
+        ]);
+
+        $producto = Producto::with('presentaciones')->findOrFail($data['producto_id']);
+        $presentacion = $producto->presentaciones->firstWhere('id', (int) $data['presentacion_id']);
+
+        if (! $presentacion) {
+            return back()->withErrors(['error' => 'La presentación seleccionada no pertenece a este producto.']);
+        }
+
+        $montos = TasaCambio::mapaMontos();
+        $tasa = $montos[$presentacion->fuente_tasa] ?? null;
+
+        if (! $tasa) {
+            return back()->withErrors(['error' => "La presentación '{$presentacion->nombre}' no tiene la tasa de cambio '{$presentacion->fuente_tasa}' configurada. Configure la tasa en Tasas de Cambio."]);
+        }
+
+        $negocio = Configuracion::obtener('nombre_negocio', config('app.name', 'Factus'));
+
+        $config = $this->getPrinterConfig();
+        $service = new PrinterService;
+        $ok = $service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre']);
+
+        if (! $ok) {
+            return back()->withErrors(['error' => 'No se pudo conectar a la impresora.']);
+        }
+
+        $ok = $service->printPrecioProducto([
+            'negocio' => $negocio,
+            'producto' => $producto->nombre,
+            'presentacion' => $presentacion->nombre,
+            'precio_bs' => $presentacion->precio_usd * $tasa,
+        ]);
+
+        if (! $ok) {
+            return back()->withErrors(['error' => 'Error al imprimir la etiqueta de precio.']);
+        }
+
+        return back()->with('success', 'Etiqueta de precio impresa correctamente.');
+    }
+
     // ========== PDF LISTA DE PRECIOS ==========
 
     public function precios(Request $request)

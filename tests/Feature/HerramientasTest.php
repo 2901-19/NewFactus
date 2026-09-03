@@ -6,6 +6,7 @@ use App\Models\Categoria;
 use App\Models\Configuracion;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
+use App\Models\TasaCambio;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -149,6 +150,54 @@ class HerramientasTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Harina Pan');
         $response->assertDontSee('Azúcar');
+    }
+
+    public function test_imprimir_precio_falla_sin_presentacion_id()
+    {
+        $producto = Producto::factory()->create();
+        $this->actingAs($this->admin);
+
+        $response = $this->from('/herramientas/precios')
+            ->get('/herramientas/precios/imprimir?producto_id='.$producto->id);
+
+        $response->assertRedirect('/herramientas/precios');
+        $response->assertSessionHasErrors('presentacion_id');
+    }
+
+    public function test_imprimir_precio_rechaza_presentacion_de_otro_producto()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Aceite']);
+        $otro = Producto::factory()->create(['nombre' => 'Arroz']);
+        $presentacion = ProductoPresentacion::factory()->create([
+            'producto_id' => $otro->id,
+            'nombre' => 'Bolsa 1kg',
+        ]);
+        $this->actingAs($this->admin);
+
+        $response = $this->from('/herramientas/precios')
+            ->get('/herramientas/precios/imprimir?producto_id='.$producto->id.'&presentacion_id='.$presentacion->id);
+
+        $response->assertRedirect('/herramientas/precios');
+        $response->assertSessionHasErrors('error');
+    }
+
+    public function test_imprimir_precio_avisa_si_no_hay_tasa()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Harina']);
+        $presentacion = ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'fuente_tasa' => 'usdt',
+        ]);
+        TasaCambio::factory()->create(['tipo' => 'promedio', 'monto' => 60.00]);
+        $this->actingAs($this->admin);
+
+        $response = $this->from('/herramientas/precios')
+            ->get('/herramientas/precios/imprimir?producto_id='.$producto->id.'&presentacion_id='.$presentacion->id);
+
+        $response->assertRedirect('/herramientas/precios');
+        $response->assertSessionHasErrors('error');
     }
 
     public function test_importar_tasas_repetidas_conserva_historial()

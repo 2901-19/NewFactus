@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios')->middleware('permiso:ver-lista-precios');
     Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf')->middleware('permiso:ver-lista-precios');
+    Route::get('/herramientas/precios/imprimir', [HerramientasController::class, 'imprimirPrecioProducto'])->name('herramientas.precios.imprimir')->middleware('permiso:ver-lista-precios');
 
     Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion')->middleware('permiso:configuracion');
     Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar')->middleware('permiso:configuracion');
