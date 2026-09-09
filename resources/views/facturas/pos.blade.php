@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('titulo', 'Punto de Venta')
 @section('contenido')
+@php $nombreNegocio = \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')); @endphp
 <div x-data="pos" class="row">
     <div class="col-md-7">
         <div class="card">
@@ -179,7 +180,7 @@
                 <div class="modal-body p-3">
                     <div class="recibo">
                         <div class="recibo-head">
-                            <div class="recibo-brand">FACTUS<span class="recibo-brand-sub">ESPERANZA VELIZ</span></div>
+                            <div class="recibo-brand">{{ $nombreNegocio }}</div>
                             <span class="recibo-titulo">FACTURA DE VENTA</span>
                         </div>
                         <div class="p-3">

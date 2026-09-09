@@ -1,6 +1,7 @@
 @php
     $esCredito = $factura->estado === 'credito';
     $tasaCambio = (float) $factura->tasa_cambio ?: 1;
+    $nombreNegocio = \App\Models\Configuracion::obtener('nombre_negocio', config('app.name'));
     $nombresMetodo = [
         'efectivo' => 'Efectivo',
         'punto' => 'Punto de Venta',
@@ -15,7 +16,7 @@
 
 <div class="recibo">
     <div class="recibo-head">
-        <div class="recibo-brand">FACTUS<span class="recibo-brand-sub">ESPERANZA VELIZ</span></div>
+        <div class="recibo-brand">{{ $nombreNegocio }}</div>
         <span class="recibo-titulo">FACTURA DE VENTA</span>
         <div>
             @if ($factura->estado === 'anulada')

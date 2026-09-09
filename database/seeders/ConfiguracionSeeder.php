@@ -10,7 +10,7 @@ class ConfiguracionSeeder extends Seeder
     public function run(): void
     {
         $configuraciones = [
-            ['clave' => 'nombre_negocio', 'valor' => 'Factus Esperanza Veliz'],
+            ['clave' => 'nombre_negocio', 'valor' => 'Factus'],
             ['clave' => 'rif', 'valor' => 'J-12345678-9'],
             ['clave' => 'direccion', 'valor' => 'Av. Principal, Local 1'],
             ['clave' => 'telefono', 'valor' => '0412-1234567'],

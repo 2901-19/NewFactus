@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Configuracion;
 use Mike42\Escpos\CapabilityProfile;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -48,10 +49,10 @@ class PrinterService
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
             $this->printer->setEmphasis(true);
             $this->printer->setTextSize(2, 2);
-            $this->printer->text("FACTUS\n");
+            $this->printer->text(config('app.name', 'Factus')."\n");
             $this->printer->setEmphasis(false);
             $this->printer->setTextSize(1, 1);
-            $this->printer->text("Esperanza Veliz\n");
+            $this->printer->text(Configuracion::obtener('nombre_negocio', config('app.name'))."\n");
             $this->printer->feed();
 
             $this->printer->setJustification(Printer::JUSTIFY_LEFT);

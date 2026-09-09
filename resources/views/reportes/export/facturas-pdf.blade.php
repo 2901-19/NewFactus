@@ -23,7 +23,7 @@
     </style>
 </head>
 <body>
-    <h1>FACTUS Esperanza Veliz</h1>
+    <h1>{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</h1>
     <p class="fecha">Reporte de Ventas - Generado el {{ now()->format('d/m/Y H:i') }}</p>
     <p class="periodo">Período: {{ \Carbon\Carbon::parse($desde)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($hasta)->format('d/m/Y') }}</p>
 

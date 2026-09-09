@@ -1,0 +1,543 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-09T00:00:00Z",
+  "title": "Design System: Factus - La Forma Libre",
+  "extensions": {
+    "colorMeta": {
+      "papel": {
+        "role": "neutral",
+        "displayName": "Papel Algodon",
+        "canonical": "oklch(95.5% 0.006 85)",
+        "tonalRamp": [
+          "oklch(15% 0.006 85)",
+          "oklch(28% 0.006 85)",
+          "oklch(42% 0.006 85)",
+          "oklch(56% 0.006 85)",
+          "oklch(70% 0.006 85)",
+          "oklch(82% 0.006 85)",
+          "oklch(91% 0.006 85)",
+          "oklch(96% 0.006 85)"
+        ]
+      },
+      "hoja": {
+        "role": "neutral",
+        "displayName": "Hoja Blanca",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(28% 0 0)",
+          "oklch(42% 0 0)",
+          "oklch(56% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(85% 0 0)",
+          "oklch(95% 0 0)",
+          "oklch(100% 0 0)"
+        ]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Tinta Pizarra",
+        "canonical": "oklch(16% 0.012 260)",
+        "tonalRamp": [
+          "oklch(10% 0.012 260)",
+          "oklch(16% 0.012 260)",
+          "oklch(25% 0.012 260)",
+          "oklch(35% 0.012 260)",
+          "oklch(48% 0.012 260)",
+          "oklch(62% 0.012 260)",
+          "oklch(78% 0.012 260)",
+          "oklch(92% 0.012 260)"
+        ]
+      },
+      "tinta-2": {
+        "role": "neutral",
+        "displayName": "Tinta Segunda",
+        "canonical": "oklch(38% 0.015 255)",
+        "tonalRamp": [
+          "oklch(15% 0.015 255)",
+          "oklch(22% 0.015 255)",
+          "oklch(30% 0.015 255)",
+          "oklch(38% 0.015 255)",
+          "oklch(50% 0.015 255)",
+          "oklch(65% 0.015 255)",
+          "oklch(80% 0.015 255)",
+          "oklch(93% 0.015 255)"
+        ]
+      },
+      "tinta-3": {
+        "role": "neutral",
+        "displayName": "Tinta Tercera",
+        "canonical": "oklch(54% 0.012 255)",
+        "tonalRamp": [
+          "oklch(18% 0.012 255)",
+          "oklch(28% 0.012 255)",
+          "oklch(38% 0.012 255)",
+          "oklch(48% 0.012 255)",
+          "oklch(54% 0.012 255)",
+          "oklch(68% 0.012 255)",
+          "oklch(82% 0.012 255)",
+          "oklch(93% 0.012 255)"
+        ]
+      },
+      "agua": {
+        "role": "neutral",
+        "displayName": "Hilo de Agua",
+        "canonical": "oklch(88% 0.008 240)",
+        "tonalRamp": [
+          "oklch(20% 0.008 240)",
+          "oklch(35% 0.008 240)",
+          "oklch(50% 0.008 240)",
+          "oklch(65% 0.008 240)",
+          "oklch(78% 0.008 240)",
+          "oklch(85% 0.008 240)",
+          "oklch(88% 0.008 240)",
+          "oklch(95% 0.008 240)"
+        ]
+      },
+      "agua-2": {
+        "role": "neutral",
+        "displayName": "Hilo de Agua 2",
+        "canonical": "oklch(82% 0.010 245)",
+        "tonalRamp": [
+          "oklch(18% 0.010 245)",
+          "oklch(30% 0.010 245)",
+          "oklch(45% 0.010 245)",
+          "oklch(60% 0.010 245)",
+          "oklch(72% 0.010 245)",
+          "oklch(80% 0.010 245)",
+          "oklch(88% 0.010 245)",
+          "oklch(95% 0.010 245)"
+        ]
+      },
+      "agua-3": {
+        "role": "neutral",
+        "displayName": "Hilo de Agua 3",
+        "canonical": "oklch(75% 0.010 250)",
+        "tonalRamp": [
+          "oklch(18% 0.010 250)",
+          "oklch(30% 0.010 250)",
+          "oklch(45% 0.010 250)",
+          "oklch(58% 0.010 250)",
+          "oklch(68% 0.010 250)",
+          "oklch(75% 0.010 250)",
+          "oklch(85% 0.010 250)",
+          "oklch(94% 0.010 250)"
+        ]
+      },
+      "acero": {
+        "role": "neutral",
+        "displayName": "Acero Claro",
+        "canonical": "oklch(94% 0.005 250)",
+        "tonalRamp": [
+          "oklch(20% 0.005 250)",
+          "oklch(35% 0.005 250)",
+          "oklch(50% 0.005 250)",
+          "oklch(65% 0.005 250)",
+          "oklch(78% 0.005 250)",
+          "oklch(88% 0.005 250)",
+          "oklch(94% 0.005 250)",
+          "oklch(98% 0.005 250)"
+        ]
+      },
+      "acero-2": {
+        "role": "neutral",
+        "displayName": "Acero Fantasma",
+        "canonical": "oklch(96.5% 0.003 250)",
+        "tonalRamp": [
+          "oklch(22% 0.003 250)",
+          "oklch(38% 0.003 250)",
+          "oklch(55% 0.003 250)",
+          "oklch(70% 0.003 250)",
+          "oklch(82% 0.003 250)",
+          "oklch(92% 0.003 250)",
+          "oklch(96.5% 0.003 250)",
+          "oklch(99% 0.003 250)"
+        ]
+      },
+      "carbono": {
+        "role": "primary",
+        "displayName": "Azul Carbon",
+        "canonical": "oklch(42% 0.10 255)",
+        "tonalRamp": [
+          "oklch(15% 0.10 255)",
+          "oklch(25% 0.10 255)",
+          "oklch(33% 0.10 255)",
+          "oklch(42% 0.10 255)",
+          "oklch(52% 0.09 255)",
+          "oklch(64% 0.07 255)",
+          "oklch(78% 0.05 255)",
+          "oklch(92% 0.02 255)"
+        ]
+      },
+      "carbono-osc": {
+        "role": "primary",
+        "displayName": "Azul Carbon Deep",
+        "canonical": "oklch(32% 0.10 255)",
+        "tonalRamp": [
+          "oklch(12% 0.10 255)",
+          "oklch(20% 0.10 255)",
+          "oklch(27% 0.10 255)",
+          "oklch(32% 0.10 255)",
+          "oklch(42% 0.09 255)",
+          "oklch(55% 0.07 255)",
+          "oklch(72% 0.05 255)",
+          "oklch(90% 0.02 255)"
+        ]
+      },
+      "carbono-suave": {
+        "role": "primary",
+        "displayName": "Azul Carbon Soft",
+        "canonical": "oklch(58% 0.06 255)",
+        "tonalRamp": [
+          "oklch(18% 0.06 255)",
+          "oklch(28% 0.06 255)",
+          "oklch(38% 0.06 255)",
+          "oklch(48% 0.06 255)",
+          "oklch(58% 0.06 255)",
+          "oklch(70% 0.04 255)",
+          "oklch(84% 0.03 255)",
+          "oklch(95% 0.01 255)"
+        ]
+      },
+      "carbono-pasto": {
+        "role": "primary",
+        "displayName": "Azul Carbon Wash",
+        "canonical": "oklch(92% 0.025 255)",
+        "tonalRamp": [
+          "oklch(18% 0.025 255)",
+          "oklch(30% 0.025 255)",
+          "oklch(48% 0.025 255)",
+          "oklch(65% 0.025 255)",
+          "oklch(80% 0.025 255)",
+          "oklch(88% 0.025 255)",
+          "oklch(92% 0.025 255)",
+          "oklch(97% 0.015 255)"
+        ]
+      },
+      "carbono-barra": {
+        "role": "primary",
+        "displayName": "Carbon Selected Marker",
+        "canonical": "oklch(74% 0.045 260)",
+        "tonalRamp": [
+          "oklch(18% 0.025 255)",
+          "oklch(30% 0.025 255)",
+          "oklch(48% 0.025 255)",
+          "oklch(65% 0.045 260)",
+          "oklch(74% 0.045 260)"
+        ]
+      },
+      "sello-verde": {
+        "role": "success",
+        "displayName": "Sello Verde",
+        "canonical": "oklch(42% 0.10 155)",
+        "tonalRamp": [
+          "oklch(15% 0.10 155)",
+          "oklch(25% 0.10 155)",
+          "oklch(33% 0.10 155)",
+          "oklch(42% 0.10 155)",
+          "oklch(52% 0.09 155)",
+          "oklch(65% 0.07 155)",
+          "oklch(80% 0.04 155)",
+          "oklch(93% 0.02 155)"
+        ]
+      },
+      "sello-verde-pasto": {
+        "role": "success",
+        "displayName": "Sello Verde Pasto",
+        "canonical": "oklch(94% 0.03 155)",
+        "tonalRamp": [
+          "oklch(18% 0.03 155)",
+          "oklch(30% 0.03 155)",
+          "oklch(50% 0.03 155)",
+          "oklch(68% 0.03 155)",
+          "oklch(82% 0.03 155)",
+          "oklch(90% 0.03 155)",
+          "oklch(94% 0.03 155)",
+          "oklch(98% 0.015 155)"
+        ]
+      },
+      "sello-rojo": {
+        "role": "danger",
+        "displayName": "Sello Rojo",
+        "canonical": "oklch(42% 0.16 25)",
+        "tonalRamp": [
+          "oklch(15% 0.16 25)",
+          "oklch(25% 0.16 25)",
+          "oklch(33% 0.16 25)",
+          "oklch(42% 0.16 25)",
+          "oklch(52% 0.14 25)",
+          "oklch(65% 0.11 25)",
+          "oklch(80% 0.06 25)",
+          "oklch(93% 0.02 25)"
+        ]
+      },
+      "sello-rojo-pasto": {
+        "role": "danger",
+        "displayName": "Sello Rojo Pasto",
+        "canonical": "oklch(94% 0.035 25)",
+        "tonalRamp": [
+          "oklch(18% 0.035 25)",
+          "oklch(30% 0.035 25)",
+          "oklch(50% 0.035 25)",
+          "oklch(68% 0.035 25)",
+          "oklch(82% 0.035 25)",
+          "oklch(90% 0.035 25)",
+          "oklch(94% 0.035 25)",
+          "oklch(98% 0.015 25)"
+        ]
+      },
+      "sello-ambar": {
+        "role": "warning",
+        "displayName": "Sello Ambar",
+        "canonical": "oklch(50% 0.10 80)",
+        "tonalRamp": [
+          "oklch(18% 0.10 80)",
+          "oklch(28% 0.10 80)",
+          "oklch(38% 0.10 80)",
+          "oklch(50% 0.10 80)",
+          "oklch(60% 0.09 80)",
+          "oklch(72% 0.07 80)",
+          "oklch(85% 0.04 80)",
+          "oklch(95% 0.02 80)"
+        ]
+      },
+      "sello-ambar-pasto": {
+        "role": "warning",
+        "displayName": "Sello Ambar Pasto",
+        "canonical": "oklch(94% 0.03 80)",
+        "tonalRamp": [
+          "oklch(18% 0.03 80)",
+          "oklch(30% 0.03 80)",
+          "oklch(50% 0.03 80)",
+          "oklch(68% 0.03 80)",
+          "oklch(82% 0.03 80)",
+          "oklch(90% 0.03 80)",
+          "oklch(94% 0.03 80)",
+          "oklch(98% 0.015 80)"
+        ]
+      },
+      "sello-azul": {
+        "role": "info",
+        "displayName": "Sello Azul",
+        "canonical": "oklch(38% 0.08 240)",
+        "tonalRamp": [
+          "oklch(15% 0.08 240)",
+          "oklch(25% 0.08 240)",
+          "oklch(32% 0.08 240)",
+          "oklch(38% 0.08 240)",
+          "oklch(50% 0.07 240)",
+          "oklch(65% 0.05 240)",
+          "oklch(80% 0.03 240)",
+          "oklch(93% 0.015 240)"
+        ]
+      },
+      "sello-azul-pasto": {
+        "role": "info",
+        "displayName": "Sello Azul Pasto",
+        "canonical": "oklch(93% 0.025 240)",
+        "tonalRamp": [
+          "oklch(18% 0.025 240)",
+          "oklch(30% 0.025 240)",
+          "oklch(50% 0.025 240)",
+          "oklch(68% 0.025 240)",
+          "oklch(82% 0.025 240)",
+          "oklch(90% 0.025 240)",
+          "oklch(93% 0.025 240)",
+          "oklch(98% 0.012 240)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "ui": {
+        "displayName": "System UI",
+        "purpose": "Body text, headings, form inputs, buttons. The neutral reading face."
+      },
+      "mono": {
+        "displayName": "Monospaced Placard",
+        "purpose": "Module headers, table column names, captions, date stamps, receipt brand, numeric labels. The 'printed form' voice."
+      }
+    },
+    "shadows": [
+      {
+        "name": "modal-lift",
+        "value": "0 10px 40px rgba(20, 24, 31, 0.22)",
+        "purpose": "The only module-level shadow in the system. Used on modal content to detach from the paper plane."
+      },
+      {
+        "name": "dropdown-float",
+        "value": "0 8px 28px rgba(20, 24, 31, 0.18)",
+        "purpose": "Dropdown menus and floating panels. Must visually detach from the page surface."
+      },
+      {
+        "name": "login-sheet",
+        "value": "0 14px 44px rgba(20, 24, 31, 0.14)",
+        "purpose": "Login form card. The only static surface that lifts - it sits alone on the Papel ground."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-sidebar",
+        "value": "0.25s ease",
+        "purpose": "Sidebar slide-in/out transition on viewport < 992px."
+      },
+      {
+        "name": "ease-nav-link",
+        "value": "0.12s ease",
+        "purpose": "Sidebar nav link hover/active color and background transitions. Fast, nearly imperceptible."
+      },
+      {
+        "name": "ease-form-focus",
+        "value": "0.15s ease",
+        "purpose": "Input field border and focus ring transitions. Subtle shift to Azul Carbon."
+      },
+      {
+        "name": "ease-button",
+        "value": "0.12s ease",
+        "purpose": "Button hover background transitions. Same speed as nav links for consistency."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sidebar-collapse", "value": "992px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The sole accent button. Azul Carbon fill, white text, flat and sealed.",
+      "html": "<button class=\"ds-btn-primary\">GUARDAR</button>",
+      "css": ".ds-btn-primary { background: var(--carbono, #2a4782); color: #ffffff; border: 1px solid var(--carbono, #2a4782); border-radius: var(--radio-hoja, 4px); padding: 0.5rem 1rem; font-weight: 600; font-size: 0.875rem; letter-spacing: 0.01em; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; } .ds-btn-primary:hover { background: var(--carbono-osc, #1e3463); border-color: var(--carbono-osc, #1e3463); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--carbono, #2a4782); } .ds-btn-primary:disabled { background: var(--carbono-suave, #7488b4); border-color: var(--carbono-suave, #7488b4); cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ghost/outline button for non-primary actions. Transparent fill, slate text, hairline border.",
+      "html": "<button class=\"ds-btn-secondary\">Ver todas</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: var(--tinta-2, #4d545c); border: 1px solid var(--agua-2, #c3c8d0); border-radius: var(--radio-hoja, 4px); padding: 0.5rem 1rem; font-weight: 600; font-size: 0.875rem; letter-spacing: 0.01em; cursor: pointer; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease; } .ds-btn-secondary:hover { background: var(--acero, #eceef1); color: var(--tinta, #20242b); border-color: var(--agua-3, #adb4be); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--carbono, #2a4782); } .ds-btn-secondary:disabled { color: var(--tinta-3, #5f666e); border-color: var(--agua, #d9dce1); background: transparent; cursor: not-allowed; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form input. White surface, strong hairline border, Azul Carbon focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Buscar producto...\" />",
+      "css": ".ds-input { background: var(--hoja, #ffffff); color: var(--tinta, #20242b); border: 1px solid var(--agua-2, #c3c8d0); border-radius: var(--radio-hoja, 4px); padding: 0.5rem 0.75rem; font-size: 0.9rem; line-height: 1.5; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-input::placeholder { color: rgba(117, 124, 133, 0.7); } .ds-input:focus { border-color: var(--carbono, #2a4782); box-shadow: 0 0 0 3px rgba(42, 71, 130, 0.18); } .ds-input.is-invalid { border-color: var(--sello-rojo, #a9241c); box-shadow: 0 0 0 3px rgba(169, 36, 28, 0.16); }"
+    },
+    {
+      "name": "Module Card",
+      "kind": "card",
+      "refersTo": "module-card",
+      "description": "The invoice-section container. White surface, hairline border, optional steel-gray header with monospaced placard label.",
+      "html": "<div class=\"ds-module-card\"><div class=\"ds-module-header\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\"><rect x=\"2\" y=\"2\" width=\"12\" height=\"12\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M5 8h6M8 5v6\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg> MODULO</div><div class=\"ds-module-body\"><span class=\"ds-module-caption\">ETIQUETA</span><span class=\"ds-module-value\">1,234</span></div></div>",
+      "css": ".ds-module-card { background: var(--hoja, #ffffff); border: 1px solid var(--agua, #d9dce1); border-radius: var(--radio-hoja, 4px); box-shadow: none; } .ds-module-header { background: var(--acero, #eceef1); border-bottom: 1px solid var(--agua-2, #c3c8d0); padding: 0.5rem 0.9rem; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-2, #4d545c); display: flex; align-items: center; gap: 0.5rem; } .ds-module-body { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.9rem; } .ds-module-caption { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tinta-3, #5f666e); } .ds-module-value { font-size: 1.9rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: var(--tinta, #20242b); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Badge Chip",
+      "kind": "chip",
+      "refersTo": "badge-success",
+      "description": "Status indicator. Transparent fill, colored stroke, icon + text. Never color alone.",
+      "html": "<span class=\"ds-badge ds-badge-success\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\"><path d=\"M3.5 8.5l3 3 6-6\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg> Contado</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; letter-spacing: 0.03em; padding: 0.34em 0.65em; border: 1px solid currentColor; border-radius: var(--radio-hoja, 4px); font-size: 0.74em; line-height: 1; } .ds-badge-success { background: var(--sello-verde-pasto, #e2efe7); color: var(--sello-verde, #246b42); } .ds-badge-danger { background: var(--sello-rojo-pasto, #f6e5e3); color: var(--sello-rojo, #a9241c); } .ds-badge-warning { background: var(--sello-ambar-pasto, #f3ecdc); color: var(--sello-ambar, #8a5a00); } .ds-badge-info { background: var(--sello-azul-pasto, #e3ecf3); color: var(--sello-azul, #20537e); } .ds-badge-neutral { background: var(--acero-2, #f2f3f5); color: var(--tinta-2, #4d545c); border-color: var(--agua-2, #c3c8d0); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "sidebar-nav",
+      "description": "Dark sidebar link. Transparent at rest, white fill on hover, white card with blue left-edge accent when active.",
+      "html": "<div class=\"ds-sidebar\"><a class=\"ds-nav-link\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\"><circle cx=\"8\" cy=\"8\" r=\"5.5\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg> Inicio</a><a class=\"ds-nav-link ds-nav-active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\"><rect x=\"3\" y=\"3\" width=\"10\" height=\"10\" rx=\"1\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg> Productos</a></div>",
+      "css": ".ds-sidebar { background: #1d232c; padding: 0.6rem; display: flex; flex-direction: column; gap: 2px; } .ds-nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.65rem; border: 1px solid transparent; border-radius: var(--radio-hoja, 4px); color: rgba(238, 240, 243, 0.66); font-size: 0.88rem; text-decoration: none; transition: background 0.12s ease, color 0.12s ease; } .ds-nav-link svg { width: 1rem; height: 1rem; color: rgba(238, 240, 243, 0.4); transition: color 0.12s ease; } .ds-nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.06); } .ds-nav-link:hover svg { color: rgba(255, 255, 255, 0.85); } .ds-nav-active { color: #14181f; background: var(--hoja, #ffffff); border-color: var(--hoja, #ffffff); font-weight: 600; position: relative; } .ds-nav-active::before { content: ''; position: absolute; left: -0.65rem; top: 0; bottom: 0; width: 3px; background: var(--carbono, #2a4782); } .ds-nav-active svg { color: var(--carbono, #2a4782); }"
+    },
+    {
+      "name": "Table Header Row",
+      "kind": "custom",
+      "refersTo": "table-header",
+      "description": "Monospaced uppercase column headers on steel-gray background. The 'ledger column stamp'.",
+      "html": "<table class=\"ds-table\"><thead><tr class=\"ds-table-header\"><th>PRODUCTO</th><th class=\"ds-table-num\">PRECIO</th><th>ESTADO</th></tr></thead><tbody><tr><td>Pepsi Cola 2L</td><td class=\"ds-table-num\">Bs 3.50</td><td><span class=\"ds-badge ds-badge-success\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\"><path d=\"M3.5 8.5l3 3 6-6\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg> Activo</span></td></tr></tbody></table>",
+      "css": ".ds-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; color: var(--tinta, #20242b); } .ds-table-header th { background: var(--tinta, #20242b); color: #eef0f3; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 0.76rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #3a4250; padding: 0.55rem 0.65rem; text-align: left; white-space: nowrap; } .ds-table td { border-bottom: 1px solid var(--agua, #d9dce1); padding: 0.55rem 0.65rem; } .ds-table tbody tr:hover { background: var(--carbono-pasto, #e5eaf4); } .ds-table-num { text-align: right; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Recibo Totals Row",
+      "kind": "custom",
+      "refersTo": "recibo-totals-row",
+      "description": "Receipt total line: monospaced label on left, bold value on right. The final-final line uses a 2px ink stamp separator.",
+      "html": "<div class=\"ds-recibo-totals\"><div class=\"ds-recibo-row\"><span>Subtotal</span><span>Bs 25.00</span></div><div class=\"ds-recibo-row\"><span>IVA (16%)</span><span>Bs 4.00</span></div><div class=\"ds-recibo-final\"><span class=\"ds-recibo-final-label\">TOTAL</span><span class=\"ds-recibo-final-value\">Bs 29.00</span></div></div>",
+      "css": ".ds-recibo-totals { font-size: 0.85rem; } .ds-recibo-row { display: flex; justify-content: space-between; padding: 0.22rem 0; gap: 1rem; } .ds-recibo-row > span:last-child { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; } .ds-recibo-final { display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 2px solid var(--tinta, #20242b); gap: 1rem; } .ds-recibo-final-label { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-weight: 700; font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tinta, #20242b); } .ds-recibo-final-value { font-weight: 700; font-size: 1.05rem; color: var(--tinta, #20242b); text-align: right; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Tira de Tasas (Rate Strip)",
+      "kind": "custom",
+      "refersTo": "rate-strip",
+      "description": "Horizontal strip showing current exchange rates as inline chips on white surface.",
+      "html": "<div class=\"ds-tira-tasas\"><span class=\"ds-tira-caption\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\"><path d=\"M2 12l4-8 4 8M3.5 9.5h5\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg> Tasas vigentes</span><span class=\"ds-tasa-chip\">BCV: <strong>36.50</strong></span><span class=\"ds-tasa-chip\">USDT: <strong>37.00</strong></span></div>",
+      "css": ".ds-tira-tasas { background: var(--hoja, #ffffff); border: 1px solid var(--agua, #d9dce1); border-radius: var(--radio-hoja, 4px); padding: 0.55rem 0.9rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; } .ds-tira-caption { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tinta-3, #5f666e); display: inline-flex; align-items: center; gap: 0.3rem; } .ds-tasa-chip { display: inline-flex; align-items: baseline; gap: 0.4rem; padding: 0.18rem 0.55rem; border: 1px solid var(--agua, #d9dce1); border-radius: var(--radio-hoja, 4px); background: var(--acero-2, #f2f3f5); font-size: 0.8rem; color: var(--tinta-2, #4d545c); } .ds-tasa-chip strong { color: var(--tinta, #20242b); font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Invoice Ledger",
+    "overview": "Factus looks like a single, never-ending planilla mercantil - a commercial invoice sheet that has been torn into modules. Every screen is a section of that same document: the paper is always white (Papel Algodon), the ink is always slate (Tinta Pizarra), and the only accent is the single Azul Carbon that would appear on a carbon-copy form. There are no gradient fills, no glassmorphism, no drop shadows at rest, no rounded corners wider than a thumb's breadth. The visual language is a direct rejection of SaaS defaults - no soft-shadow cards, no pastel gradient headers, no frosted navbars. Every pixel is drawn in ink on paper.\n\nThe system runs on-premises in Venezuelan bodegas without internet: cashiers at the counter need to process sales fast, in dual currency, with receipts that print on thermal paper. The typeface choice - system fonts only, zero web fonts - is a constraint born from offline deployment, but it becomes the aesthetic: the mechanical precision of ui-monospace for labels and tabular data, and the clean neutrality of system-ui for body text. Numbers always use tabular-nums lining figures so columns of currency align without fuss.\n\nEvery module on screen is a hairline-bordered box that could be a section of a physical invoice form. Module headers are stamped in uppercase monospaced caps (the placard voice). Status badges carry both an icon and a colored stroke - never color alone. Buttons are flat ink stamps with no elevation at rest. The result is a POS that feels like operating a well-organized ledger book, not a modern web application.",
+    "keyCharacteristics": [
+      "Papel (cotton-white) ground, Tinta (slate) text, Azul Carbon single accent",
+      "Hairline borders everywhere; no shadows at rest",
+      "4px radius maximum on all corners",
+      "Monospaced uppercase placard labels for module headers, captions, and date stamps",
+      "Tabular-nums lining figures on every numeric value",
+      "Status badges: icon + stroke, never bare color",
+      "System fonts only (system-ui + ui-monospace); zero web font requests",
+      "Flat, sealed buttons with ink-on-paper weight"
+    ],
+    "rules": [
+      {
+        "name": "The Pamper-Only-One-Accent Rule",
+        "body": "Azul Carbon is the only chromatic accent in the system. No other hue is used for interactive elements, links, or emphasis at full saturation. State seals are semantic signals, not competing accents.",
+        "section": "colors"
+      },
+      {
+        "name": "The Border-Tells-The-Story Rule",
+        "body": "Depth in this system is communicated entirely through hairline border weight and tonal background shifts (Acero Claro headers, Acero Fantasma stripes), never through drop shadows. Cards have box-shadow: none !important.",
+        "section": "colors"
+      },
+      {
+        "name": "The State-Seal-Pair Rule",
+        "body": "Every state color is always deployed as a pair: the dark hue for text/icon stroke plus the pale pastel for background wash. Never use the dark hue as a background fill at full opacity on large areas.",
+        "section": "colors"
+      },
+      {
+        "name": "The Monospaced-Placard Rule",
+        "body": "All structural labels - module headers, table column names, metric captions, receipt field names, date stamps, and the rate strip - are set in uppercase monospaced type with generous letter-spacing (0.06em-0.22em). This is the printed form voice. Body text and interactive elements use UI font; only structural annotations use mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular-Figures-Everywhere Rule",
+        "body": "The html element sets font-variant-numeric: tabular-nums lining-nums globally. Every number in the system - prices, quantities, rates, dates, KPIs - aligns in columns without explicit width hacks. This is non-negotiable for a dual-currency POS.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "All module surfaces are flat at rest. Shadows appear only on floating overlays (modals, dropdowns) that must visually detach from the paper plane. Dashboard cards, table containers, and form panels never cast shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use hairline borders and tonal background shifts to create depth - never drop shadows on module surfaces.",
+      "Do set all structural labels (module headers, table columns, captions, receipt fields) in uppercase monospaced with generous letter-spacing.",
+      "Do pair every state seal color with its pastel wash: dark hue for text/icon, pale hue for background tinting.",
+      "Do use tabular-nums on every numeric value (globally set on html, but verify in custom contexts).",
+      "Do keep Azul Carbon as the sole interactive accent. Focus rings, links, active states, and primary buttons use this color and only this color.",
+      "Do use 4px radius uniformly on all surfaces - cards, inputs, buttons, badges, modals, receipts.",
+      "Do include an icon alongside every status badge text. Color alone is not sufficient.",
+      "Do use Bootstrap's system of utility classes (btn-*, text-*, bg-*, border-*) since the CSS custom property bridge maps them to the palette automatically."
+    ],
+    "donts": [
+      "Don't add box-shadow to cards, tables, or module containers. The only exceptions are modals and dropdown menus.",
+      "Don't use gradients, glassmorphism, backdrop-filter, or any translucent overlay on module surfaces.",
+      "Don't introduce a second accent hue for interactive elements. State seals are semantic signals, not clickable accents.",
+      "Don't use pill-shaped buttons, circular avatars, or varied border-radius values. 4px is the universal radius.",
+      "Don't load web fonts (Google Fonts, Adobe Fonts, or self-hosted woff files). The type system is built entirely from OS-native fonts for offline reliability.",
+      "Don't use color alone to convey status. Every badge and state indicator must carry an icon.",
+      "Don't make module headers any background other than Acero Claro (#eceef1). The header is the formstamp of the invoice.",
+      "Don't use the receipt's 2px total separator anywhere except the receipt total and login header. That weight is reserved for ink stamp moments."
+    ]
+  }
+}

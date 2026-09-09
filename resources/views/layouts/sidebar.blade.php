@@ -1,10 +1,13 @@
 @php $user = auth()->user(); @endphp
 <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header d-flex align-items-center justify-content-between">
-        <a href="{{ route('dashboard') }}" class="text-white text-decoration-none fw-bold">
-            <i class="bi bi-shop"></i> Factus
-        </a>
-        <button class="btn btn-sm btn-outline-light d-lg-none" onclick="toggleSidebar()">&times;</button>
+    <div class="sidebar-header d-flex align-items-center justify-content-between gap-3">
+        <div style="min-width: 0;">
+            <a href="{{ route('dashboard') }}" class="marca-linea text-decoration-none">{{ config('app.name', 'Factus') }}</a>
+            <span class="marca-negocio">{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</span>
+        </div>
+        <button type="button" class="btn-toggle-lateral" aria-label="Ocultar menú" onclick="toggleSidebar()">
+            <i class="bi bi-chevron-left"></i>
+        </button>
     </div>
     <div class="sidebar-body">
         <ul class="nav nav-pills flex-column">
@@ -64,7 +67,7 @@
                 </a>
             </li>
             @endif
-            <hr class="text-secondary">
+            <hr>
             @if ($user->hasPermiso('ver-facturas'))
             <li class="nav-item">
                 <a href="{{ route('facturas.index') }}" class="nav-link {{ request()->routeIs('facturas.index') ? 'active' : '' }}">
@@ -98,7 +101,7 @@
                 </a>
             </li>
             @endif
-            <hr class="text-secondary">
+            <hr>
             @if ($user->hasPermiso('gestionar-usuarios'))
             <li class="nav-item">
                 <a href="{{ route('usuarios.index') }}" class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
@@ -139,7 +142,7 @@
                 </a>
             </li>
             @endif
-            <hr class="text-secondary">
+            <hr>
             <li class="nav-item">
                 <a href="{{ route('profile.edit') }}" class="nav-link">
                     <i class="bi bi-person-circle"></i> Mi Perfil

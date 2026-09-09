@@ -7,7 +7,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <div class="text-center py-4 text-muted">Cargando…</div>
+                <div class="estado-cargando"><span class="spinner-border spinner-border-sm"></span> Cargando factura…</div>
             </div>
         </div>
     </div>
@@ -20,12 +20,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = $(this);
         const modal = document.getElementById('facturaVerModal');
         const body = $(modal).find('.modal-body');
-        body.html('<div class="text-center py-4 text-muted">Cargando…</div>');
+        body.html('<div class="estado-cargando"><span class="spinner-border spinner-border-sm"></span> Cargando factura…</div>');
         new bootstrap.Modal(modal).show();
         fetch(btn.data('url'))
             .then((r) => { if (!r.ok) throw new Error('error'); return r.text(); })
             .then((html) => body.html(html))
-            .catch(() => body.html('<div class="text-center py-4 text-muted">No se pudo cargar la factura.</div>'));
+            .catch(() => body.html('<div class="estado-cargando text-danger">No se pudo cargar la factura.</div>'));
     });
 });
 </script>

@@ -16,7 +16,7 @@
     </style>
 </head>
 <body>
-    <h1>FACTUS Esperanza Veliz</h1>
+    <h1>{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</h1>
     <p class="fecha">Balance Mensual {{ $anio }} - Generado el {{ now()->format('d/m/Y H:i') }}</p>
 
     <table>

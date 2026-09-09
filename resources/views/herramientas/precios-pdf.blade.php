@@ -16,7 +16,7 @@
     </style>
 </head>
 <body>
-    <h1>FACTUS Esperanza Veliz</h1>
+    <h1>{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</h1>
     <p class="fecha">Lista de Precios{{ $categoria ? ' - '.$categoria->nombre : '' }} - Generado el {{ $fecha }}</p>
     <table>
         <thead>

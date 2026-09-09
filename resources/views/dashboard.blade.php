@@ -8,10 +8,10 @@
     $tienePermiso = fn ($slug) => Auth::user()->hasPermiso($slug);
 @endphp
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+<div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-2">
     <div>
-        <h3 class="mb-0">Hola, {{ Auth::user()->name }}</h3>
-        <div class="text-muted">
+        <h1 class="titulo-pagina">Hola, {{ Auth::user()->name }}</h1>
+        <div class="subtitulo-pagina mt-1">
             {{ $nombreNegocio }} &middot; {{ now()->translatedFormat('l, d \d\e F Y') }}
         </div>
     </div>
@@ -36,96 +36,86 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Ingresos Hoy</div>
-                        <div class="fs-3 fw-bold">{{ $ventasHoy }}</div>
-                        <div class="small text-muted">
-                            Bs {{ number_format($totalHoyBs, 2) }} &middot; ${{ number_format($totalHoyUsd, 2) }}
-                        </div>
+                <div class="modulo-metrica">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="metrica-caption">Ingresos hoy</span>
+                        <span class="modulo-icono text-primary"><i class="bi bi-cart3"></i></span>
                     </div>
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
-                        <i class="bi bi-cart3 fs-5 text-primary"></i>
-                    </div>
+                    <div class="metrica-valor">{{ $ventasHoy }}</div>
+                    <div class="metrica-secundaria">Bs {{ number_format($totalHoyBs, 2) }} &middot; ${{ number_format($totalHoyUsd, 2) }}</div>
                 </div>
-                <div class="mt-2">
+                <div class="mt-3">
                     @if ($variacionHoy !== null)
-                        <span class="badge {{ $variacionHoy >= 0 ? 'bg-success' : 'bg-danger' }}">
-                            <i class="bi {{ $variacionHoy >= 0 ? 'bi-arrow-up' : 'bi-arrow-down' }}"></i>
+                        <span class="tendencia {{ $variacionHoy >= 0 ? 'tendencia-alta' : 'tendencia-baja' }}">
+                            <i class="bi {{ $variacionHoy >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
                             {{ number_format(abs($variacionHoy), 1) }}% vs ayer
                         </span>
                     @else
-                        <span class="small text-muted">Sin ventas ayer</span>
+                        <span class="tendencia">Sin ventas ayer</span>
                     @endif
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Ingresos del Mes</div>
-                        <div class="fs-3 fw-bold">{{ $ventasMes }}</div>
-                        <div class="small text-muted">
-                            Bs {{ number_format($totalMesBs, 2) }} &middot; ${{ number_format($totalMesUsd, 2) }}
-                        </div>
+                <div class="modulo-metrica">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="metrica-caption">Ingresos del mes</span>
+                        <span class="modulo-icono text-success"><i class="bi bi-graph-up-arrow"></i></span>
                     </div>
-                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                        <i class="bi bi-graph-up-arrow fs-5 text-success"></i>
-                    </div>
+                    <div class="metrica-valor">{{ $ventasMes }}</div>
+                    <div class="metrica-secundaria">Bs {{ number_format($totalMesBs, 2) }} &middot; ${{ number_format($totalMesUsd, 2) }}</div>
                 </div>
-                <div class="mt-2">
+                <div class="mt-3">
                     @if ($variacionMes !== null)
-                        <span class="badge {{ $variacionMes >= 0 ? 'bg-success' : 'bg-danger' }}">
-                            <i class="bi {{ $variacionMes >= 0 ? 'bi-arrow-up' : 'bi-arrow-down' }}"></i>
+                        <span class="tendencia {{ $variacionMes >= 0 ? 'tendencia-alta' : 'tendencia-baja' }}">
+                            <i class="bi {{ $variacionMes >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
                             {{ number_format(abs($variacionMes), 1) }}% vs mes anterior
                         </span>
                     @else
-                        <span class="small text-muted">Sin ventas en el mes anterior</span>
+                        <span class="tendencia">Sin ventas el mes anterior</span>
                     @endif
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Créditos Pendientes</div>
-                        <div class="fs-3 fw-bold">{{ $creditosPendientes }}</div>
-                        <div class="small text-muted">Bs {{ number_format($totalCreditosPendientesBs, 2) }}</div>
+                <div class="modulo-metrica">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="metrica-caption">Créditos pendientes</span>
+                        <span class="modulo-icono text-warning"><i class="bi bi-credit-card"></i></span>
                     </div>
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-3">
-                        <i class="bi bi-credit-card fs-5 text-warning"></i>
-                    </div>
+                    <div class="metrica-valor">{{ $creditosPendientes }}</div>
+                    <div class="metrica-secundaria">Bs {{ number_format($totalCreditosPendientesBs, 2) }}</div>
                 </div>
                 @if ($tienePermiso('gestionar-creditos') && $creditosPendientes > 0)
-                    <a href="{{ route('facturas.creditos') }}" class="small text-decoration-none mt-2 d-inline-block">Cobrar ahora</a>
+                    <a href="{{ route('facturas.creditos') }}" class="tendencia d-inline-flex mt-3 text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right"></i>Cobrar ahora
+                    </a>
                 @endif
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Productos</div>
-                        <div class="fs-3 fw-bold">{{ $totalProductos }}</div>
-                        <div class="small text-muted">{{ $totalClientes }} clientes</div>
+                <div class="modulo-metrica">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="metrica-caption">Productos</span>
+                        <span class="modulo-icono text-info"><i class="bi bi-box"></i></span>
                     </div>
-                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
-                        <i class="bi bi-box fs-5 text-info"></i>
-                    </div>
+                    <div class="metrica-valor">{{ $totalProductos }}</div>
+                    <div class="metrica-secundaria">{{ $totalClientes }} clientes</div>
                 </div>
                 @if ($tienePermiso('ver-stock-bajo'))
-                    <a href="{{ route('reportes.stock') }}" class="small text-decoration-none mt-2 d-inline-block">
-                        {{ $productosStockBajo->count() }} con existencia baja
+                    <a href="{{ route('reportes.stock') }}" class="tendencia d-inline-flex mt-3 text-decoration-none">
+                        <i class="bi bi-exclamation-triangle"></i>{{ $productosStockBajo->count() }} con existencia baja
                     </a>
                 @endif
             </div>
@@ -134,11 +124,11 @@
 </div>
 
 @if ($tasasVigentes->isNotEmpty())
-    <div class="card shadow-sm mb-4">
-        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
-            <span class="small text-muted fw-semibold me-1"><i class="bi bi-currency-exchange"></i> Tasas vigentes:</span>
+    <div class="tira-tasas mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="tira-caption"><i class="bi bi-currency-exchange me-1"></i>Tasas vigentes</span>
             @foreach ($tasasVigentes as $tasa)
-                <span class="badge rounded-pill bg-light text-dark border">
+                <span class="tasa-chip">
                     {{ $tasa->nombre ?: ucfirst($tasa->tipo) }}: <strong>{{ number_format($tasa->monto, 2) }}</strong>
                 </span>
             @endforeach
@@ -148,7 +138,7 @@
 
 <div class="row g-3 mb-4">
     <div class="col-lg-7">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-header"><i class="bi bi-graph-up"></i> Ingresos de los últimos 7 días</div>
             <div class="card-body">
                 @if ($totalSemanaBs > 0)
@@ -160,7 +150,7 @@
         </div>
     </div>
     <div class="col-lg-5">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-header"><i class="bi bi-pie-chart"></i> Métodos de pago (ingresos hoy)</div>
             <div class="card-body">
                 @if (array_sum($metodosHoy) > 0)
@@ -175,7 +165,7 @@
 
 <div class="row g-3 mb-4">
     <div class="col-lg-6">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-receipt"></i> Últimas facturas</span>
                 @if ($tienePermiso('ver-facturas'))
@@ -203,11 +193,12 @@
                                     @if ($esAnulada($f))
                                         <span class="badge bg-danger">Anulada</span>
                                     @elseif ($esCredito($f))
-                                        <span class="badge bg-warning text-dark">
-                                            Crédito {{ $f->estado_credito === 'cancelado' ? '(Cancelado)' : '(Pendiente)' }}
+                                        <span class="badge bg-warning">
+                                            <i class="bi {{ $f->estado_credito === 'cancelado' ? 'bi-check-circle' : 'bi-hourglass-split' }}"></i>
+                                            {{ $f->estado_credito === 'cancelado' ? 'Crédito cancelado' : 'Crédito pendiente' }}
                                         </span>
                                     @else
-                                        <span class="badge bg-success">Contado</span>
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Contado</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
@@ -226,7 +217,7 @@
     </div>
     @if ($tienePermiso('gestionar-creditos'))
         <div class="col-lg-6">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-clock-history"></i> Créditos por cobrar</span>
                     <a href="{{ route('facturas.creditos') }}" class="btn btn-sm btn-outline-secondary">Cobrar</a>
@@ -260,7 +251,7 @@
                     </table>
                 </div>
                 @if ($creditosPendientes > 0)
-                    <div class="card-footer bg-transparent small text-muted">
+                    <div class="card-footer small text-muted">
                         Total pendiente: Bs {{ number_format($totalCreditosPendientesBs, 2) }} en {{ $creditosPendientes }} factura(s)
                     </div>
                 @endif
@@ -272,7 +263,7 @@
 <div class="row g-3">
     @if ($tienePermiso('ver-stock-bajo'))
         <div class="col-lg-6">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-exclamation-triangle"></i> Existencia baja ({{ CatalogoService::UMBRAL_STOCK_BAJO }} o menos)</span>
                     <a href="{{ route('reportes.stock') }}" class="btn btn-sm btn-outline-secondary">Ver reporte</a>
@@ -301,7 +292,7 @@
         </div>
     @endif
     <div class="col-lg-6">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-header"><i class="bi bi-trophy"></i> Más vendidos (últimos 30 días)</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
@@ -333,6 +324,9 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const tintaCarbon = '#2a4782';
+    const tintasDona = ['#2a4782', '#5d7298', '#93a4c4', '#c6cfdf', '#4d545c', '#8f6f2e', '#246b42'];
+
     @if ($totalSemanaBs > 0)
     const porDia7 = @json($porDia7);
     new Chart(document.getElementById('chart7dias'), {
@@ -342,8 +336,11 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 label: 'Ventas Bs',
                 data: Object.values(porDia7),
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                borderColor: tintaCarbon,
+                backgroundColor: 'rgba(42, 71, 130, 0.10)',
+                pointBackgroundColor: tintaCarbon,
+                pointBorderColor: '#fff',
+                pointRadius: 3,
                 fill: true,
                 tension: 0.3,
             }],
@@ -352,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
             plugins: { legend: { display: false } },
             scales: {
                 y: { ticks: { callback: (v) => 'Bs ' + Number(v).toLocaleString('es-VE') } },
+                x: { grid: { display: false } },
             },
         },
     });
@@ -365,11 +363,16 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'doughnut',
         data: {
             labels: filas.map(([k]) => nombresMetodo[k] || k),
-            datasets: [{ data: filas.map(([, v]) => v), borderWidth: 1 }],
+            datasets: [{
+                data: filas.map(([, v]) => v),
+                backgroundColor: filas.map((_, i) => tintasDona[i % tintasDona.length]),
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }],
         },
         options: {
             plugins: {
-                legend: { position: 'bottom' },
+                legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } },
                 tooltip: { callbacks: { label: (ctx) => ' Bs ' + Number(ctx.parsed).toLocaleString('es-VE') } },
             },
         },

@@ -8,30 +8,26 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="login-page">
-    <div class="login-page-bg" aria-hidden="true"></div>
-    <div class="login-page-overlay" aria-hidden="true"></div>
+    <main class="login-hoja">
+        <div class="login-margen">
 
-    <main class="login-wrapper">
-        <section class="login-ticket">
-            <div class="login-brand">
-                <div class="login-logo">F</div>
-                <div class="login-brand-text">
-                    <h1 class="login-title">Factus</h1>
-                    <p class="login-subtitle">Esperanza Veliz</p>
+            <header class="login-cabecera">
+                <div>
+                    <div class="login-marca">{{ config('app.name', 'Factus') }}</div>
+                    <span class="login-negocio">{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</span>
                 </div>
-            </div>
+                @if (\App\Models\Configuracion::obtener('rif'))
+                    <div class="login-rif">RIF<br>{{ \App\Models\Configuracion::obtener('rif') }}</div>
+                @endif
+            </header>
 
-            <div class="login-divider">
-                <div class="login-barcode" aria-hidden="true"></div>
-            </div>
-
-            <form method="POST" action="{{ route('login') }}" class="login-form">
+            <form method="POST" action="{{ route('login') }}" class="login-cuerpo">
                 @csrf
 
-                <div class="login-field">
-                    <label for="usuario" class="login-label">Usuario</label>
-                    <div class="login-input-wrap">
-                        <i class="bi bi-person login-input-icon"></i>
+                <div class="login-linea">
+                    <label for="usuario" class="login-etiqueta">Usuario</label>
+                    <div class="login-campo">
+                        <i class="bi bi-person login-icono" aria-hidden="true"></i>
                         <input id="usuario" type="text" name="usuario" placeholder="Ingresa tu usuario"
                                class="login-input @error('usuario') is-invalid @enderror"
                                value="{{ old('usuario') }}" required autofocus autocomplete="username">
@@ -41,14 +37,14 @@
                     @enderror
                 </div>
 
-                <div class="login-field">
-                    <label for="password" class="login-label">Contraseña</label>
-                    <div class="login-input-wrap">
-                        <i class="bi bi-lock login-input-icon"></i>
+                <div class="login-linea">
+                    <label for="password" class="login-etiqueta">Contraseña</label>
+                    <div class="login-campo">
+                        <i class="bi bi-lock login-icono" aria-hidden="true"></i>
                         <input id="password" type="password" name="password" placeholder="Ingresa tu contraseña"
                                class="login-input login-input--password @error('password') is-invalid @enderror"
                                required autocomplete="current-password">
-                        <button type="button" class="login-eye" aria-label="Mostrar contraseña"
+                        <button type="button" class="login-ojo" aria-label="Mostrar contraseña"
                                 data-login-toggle-password>
                             <i class="bi bi-eye"></i>
                         </button>
@@ -58,16 +54,18 @@
                     @enderror
                 </div>
 
-                <button type="submit" class="login-btn">
+                <button type="submit" class="login-boton">
                     <i class="bi bi-box-arrow-in-right"></i>
-                    Ingresar
+                    Ingresar al sistema
                 </button>
             </form>
 
-            <div class="login-footer">
-                © {{ date('Y') }} Factus Esperanza Veliz · Punto de Venta
-            </div>
-        </section>
+            <footer class="login-pie">
+                <span class="login-pie-txt">Factus · Punto de Venta</span>
+                <span class="login-pie-corr">© {{ date('Y') }}</span>
+            </footer>
+
+        </div>
     </main>
 
     <script>
