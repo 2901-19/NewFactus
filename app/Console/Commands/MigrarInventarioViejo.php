@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
+use App\Services\PrecioService;
 use Database\Seeders\TasaReferenciaSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +13,10 @@ class MigrarInventarioViejo extends Command
 {
     protected $signature = 'migrar:inventario-viejo
                             {--archivo= : Ruta al archivo SQL del sistema viejo}
-                            {--force : Eliminar productos existentes antes de migrar}';
+                            {--force : Eliminar productos existentes antes de migrar}
+                            {--export-json= : Ruta afin/json donde volcar el catálogo sin tocar la base de datos}';
 
-    protected $description = 'Migrar inventario del sistema viejo (tabla inventories) al nuevo esquema de productos y presentaciones';
+    protected $description = 'Migrar inventario del sistema viejo (tabla inventories) al nuevo esquema de productos y presentaciones; o volcarlo a JSON editable con --export-json';
 
     public function handle(): int
     {
@@ -24,6 +26,10 @@ class MigrarInventarioViejo extends Command
             $this->error('Archivo no encontrado. Especifica la ruta con --archivo="ruta/al/archivo.sql"');
 
             return 1;
+        }
+
+        if ($this->option('export-json')) {
+            return $this->exportarJson($archivo);
         }
 
         try {
@@ -153,9 +159,91 @@ class MigrarInventarioViejo extends Command
         return 0;
     }
 
+    private function exportarJson(string $archivo): int
+    {
+        $registros = $this->parsearSql($archivo);
+
+        if (empty($registros)) {
+            $this->error('No se encontraron registros INSERT en el archivo.');
+
+            return 1;
+        }
+
+        $grupos = $this->agruparPorNombre($registros);
+        $ruta = $this->option('export-json');
+        $payload = json_encode(
+            ['precios' => $this->construirPrecios($grupos)],
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+        );
+
+        if ($payload === false || file_put_contents($ruta, $payload) === false) {
+            $this->error("No se pudo escribir el archivo: {$ruta}");
+
+            return 1;
+        }
+
+        $this->info("Catálogo exportado a: {$ruta}");
+        $this->line('  '.count($grupos).' productos con sus presentaciones, listos para editar precios e importar.');
+        $this->line('  La base de datos NO fue modificada.');
+
+        return 0;
+    }
+
+    private function construirPrecios(array $grupos): array
+    {
+        $precios = [];
+
+        foreach ($grupos as $grupo) {
+            $normal = collect($grupo)->first(fn ($r) => ! $this->esMayor($r));
+            $mayor = collect($grupo)->first(fn ($r) => $this->esMayor($r));
+            $base = $normal ?? $mayor;
+            $costoUsd = $this->calcularCosto($base['precie_usd'], $base['porcentage']);
+
+            $presentaciones = [];
+
+            if ($normal) {
+                $margen = round((float) $base['porcentage'], 2);
+                $presentaciones[] = [
+                    'nombre' => 'Unidad',
+                    'factor_conversion' => 1,
+                    'margen' => $margen,
+                    'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
+                    'fuente_tasa' => $this->mapearFuenteTasa($base['daily_dollar']),
+                    'activa' => true,
+                ];
+            }
+
+            if ($mayor) {
+                $margen = round((float) $mayor['porcentage'], 2);
+                $factor = (int) $mayor['units_package'] ?: 1;
+                $presentaciones[] = [
+                    'nombre' => 'Mayor',
+                    'factor_conversion' => $factor,
+                    'margen' => $margen,
+                    'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, $factor),
+                    'fuente_tasa' => $this->mapearFuenteTasa($mayor['daily_dollar']),
+                    'activa' => true,
+                ];
+            }
+
+            $precios[] = [
+                'nombre' => $this->componerNombre($base['name'], $base['description']),
+                'costo_usd' => $costoUsd,
+                'presentaciones' => $presentaciones,
+            ];
+        }
+
+        return $precios;
+    }
+
     private function parsearSql(string $archivo): array
     {
         $contenido = file_get_contents($archivo);
+
+        // Quitar BOM UTF-8 si el archivo lo trae (Notepad o exportaciones con codificación)
+        if (str_starts_with($contenido, "\xEF\xBB\xBF")) {
+            $contenido = substr($contenido, 3);
+        }
 
         // Detectar y convertir codificación (el archivo viejo suele ser Latin1/Win-1252)
         $detected = mb_detect_encoding($contenido, ['ASCII', 'UTF-8', 'ISO-8859-1', 'Windows-1252'], true);

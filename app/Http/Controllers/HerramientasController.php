@@ -13,6 +13,7 @@ use App\Services\PrecioService;
 use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -501,7 +502,10 @@ class HerramientasController extends Controller
     public function precios(Request $request)
     {
         $categoriaId = $request->integer('categoria_id');
-        $productos = $this->productosParaPrecios($categoriaId);
+        $base = $this->productosParaPrecios($categoriaId);
+        $opciones = $this->opcionesPresentaciones($base);
+        $filtro = $this->normalizarFiltroPresentacion((array) $request->input('presentacion', []), $opciones);
+        $productos = $this->filtrarPorPresentaciones($base, $filtro);
         $categorias = Categoria::orderBy('nombre')->get();
 
         $tasas = TasaCambio::mapaMontos();
@@ -511,34 +515,44 @@ class HerramientasController extends Controller
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
                 'impuesto' => $p->impuesto?->nombre,
-                'presentaciones' => $p->presentaciones->map(fn ($pr) => [
-                    'nombre' => $pr->nombre,
-                    'factor_conversion' => $pr->factor_conversion,
-                    'margen' => $pr->margen,
-                    'precio_usd' => $pr->precio_usd,
-                    'fuente_tasa' => $pr->fuente_tasa,
-                    'precio_bs' => round($pr->precio_usd * ($tasas[$pr->fuente_tasa] ?? 1), 2),
-                    'activa' => $pr->activa,
-                ])->values(),
+                'presentaciones' => $p->presentaciones
+                    ->where('activa', true)
+                    ->when(! empty($filtro), fn ($col) => $col->whereIn('nombre', $filtro))
+                    ->map(fn ($pr) => [
+                        'nombre' => $pr->nombre,
+                        'factor_conversion' => $pr->factor_conversion,
+                        'margen' => $pr->margen,
+                        'precio_usd' => $pr->precio_usd,
+                        'fuente_tasa' => $pr->fuente_tasa,
+                        'precio_bs' => round($pr->precio_usd * ($tasas[$pr->fuente_tasa] ?? 1), 2),
+                        'activa' => $pr->activa,
+                    ])->values(),
             ]);
 
             return response()->json($data);
         }
 
-        return view('herramientas.precios', compact('productos', 'tasas', 'categorias', 'categoriaId'));
+        $presentacionesOpciones = $opciones;
+        $presentacionesFiltro = $filtro;
+
+        return view('herramientas.precios', compact('productos', 'tasas', 'categorias', 'categoriaId', 'presentacionesOpciones', 'presentacionesFiltro'));
     }
 
     public function preciosPdf(Request $request)
     {
         $categoriaId = $request->integer('categoria_id');
-        $productos = $this->productosParaPrecios($categoriaId);
+        $base = $this->productosParaPrecios($categoriaId);
+        $opciones = $this->opcionesPresentaciones($base);
+        $filtro = $this->normalizarFiltroPresentacion((array) $request->input('presentacion', []), $opciones);
+        $productos = $this->filtrarPorPresentaciones($base, $filtro);
         $categoria = $categoriaId ? Categoria::find($categoriaId) : null;
 
         $tasas = TasaCambio::mapaMontos();
         $fecha = now()->format('d/m/Y H:i');
 
-        $sufijo = $categoria ? '_'.Str::slug($categoria->nombre) : '';
-        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha', 'categoria'));
+        $sufijo = ($categoria ? '_'.Str::slug($categoria->nombre) : '')
+            .($filtro ? '_'.Str::slug(implode('_', $filtro)) : '');
+        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha', 'categoria', 'filtro'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('lista_precios'.$sufijo.'_'.now()->format('Y_m_d').'.pdf');
@@ -552,6 +566,43 @@ class HerramientasController extends Controller
             ->with(['presentaciones', 'impuesto'])
             ->orderBy('nombre')
             ->get();
+    }
+
+    private function opcionesPresentaciones(Collection $productos): array
+    {
+        return $productos
+            ->pluck('presentaciones')
+            ->flatten(1)
+            ->where('activa', true)
+            ->pluck('nombre')
+            ->map(fn (string $nombre) => trim($nombre))
+            ->filter(fn (string $nombre) => $nombre !== '')
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    private function normalizarFiltroPresentacion(array $elegidas, array $opciones): array
+    {
+        $elegidas = array_map('trim', $elegidas);
+
+        return array_values(array_intersect($elegidas, $opciones));
+    }
+
+    private function filtrarPorPresentaciones(Collection $productos, array $filtro): Collection
+    {
+        if (empty($filtro)) {
+            return $productos;
+        }
+
+        return $productos
+            ->filter(function (Producto $p) use ($filtro) {
+                return $p->presentaciones
+                    ->where('activa', true)
+                    ->contains(fn ($pr) => in_array($pr->nombre, $filtro, true));
+            })
+            ->values();
     }
 
     // ========== CONFIGURACIÓN DEL NEGOCIO ==========

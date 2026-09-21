@@ -2,7 +2,7 @@
 @section('titulo', 'Lista de Precios')
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <p class="text-muted mb-0">{{ $productos->count() }} productos disponibles{{ $categoriaId ? ' en la categoría seleccionada' : '' }}.</p>
+    <p class="text-muted mb-0">{{ $productos->count() }} productos disponibles{{ $categoriaId ? ' en la categoría seleccionada' : '' }}{{ $presentacionesFiltro ? ' — presentación: '.implode(', ', $presentacionesFiltro) : '' }}.</p>
     <div class="d-flex gap-2 align-items-center">
         <select id="filtroCategoria" class="form-select form-select-sm" style="width:auto">
             <option value="">Todas las categorías</option>
@@ -10,13 +10,28 @@
             <option value="{{ $c->id }}" @selected($categoriaId == $c->id)>{{ $c->nombre }}</option>
             @endforeach
         </select>
-        <a href="{{ route('herramientas.precios.pdf', ['categoria_id' => $categoriaId]) }}" class="btn btn-danger">
+        <a href="{{ route('herramientas.precios.pdf', array_merge($categoriaId ? ['categoria_id' => $categoriaId] : [], $presentacionesFiltro ? ['presentacion' => $presentacionesFiltro] : [])) }}" class="btn btn-danger">
             <i class="bi bi-filetype-pdf"></i> Descargar PDF
         </a>
-        <a href="{{ route('herramientas.precios', ['export' => 'json', 'categoria_id' => $categoriaId]) }}" class="btn btn-success">
+        <a href="{{ route('herramientas.precios', array_merge(['export' => 'json'], $categoriaId ? ['categoria_id' => $categoriaId] : [], $presentacionesFiltro ? ['presentacion' => $presentacionesFiltro] : [])) }}" class="btn btn-success">
             <i class="bi bi-filetype-json"></i> Descargar JSON
         </a>
     </div>
+</div>
+<div class="d-flex flex-wrap align-items-center gap-1 mb-3">
+    <span class="text-muted small fw-semibold me-1">Presentación:</span>
+    @php $paramsCategoria = $categoriaId ? ['categoria_id' => $categoriaId] : []; @endphp
+    <a href="{{ route('herramientas.precios', $paramsCategoria) }}" class="btn btn-sm {{ $presentacionesFiltro ? 'btn-outline-secondary' : 'btn-primary' }}">Todas</a>
+    @foreach ($presentacionesOpciones as $opcion)
+    @php
+        $seleccionada = in_array($opcion, $presentacionesFiltro, true);
+        $nuevas = $seleccionada
+            ? array_values(array_diff($presentacionesFiltro, [$opcion]))
+            : array_values(array_merge($presentacionesFiltro, [$opcion]));
+        $urlPill = route('herramientas.precios', array_merge($paramsCategoria, $nuevas ? ['presentacion' => $nuevas] : []));
+    @endphp
+    <a href="{{ $urlPill }}" class="btn btn-sm {{ $seleccionada ? 'btn-primary' : 'btn-outline-secondary' }}">{{ $opcion }}</a>
+    @endforeach
 </div>
 <div class="table-responsive">
     <table id="preciosTable" class="table table-bordered table-striped">
@@ -32,7 +47,7 @@
         </thead>
         <tbody>
             @foreach ($productos as $p)
-            @foreach ($p->presentaciones->where('activa', true) as $pr)
+            @foreach ($p->presentaciones->where('activa', true)->when($presentacionesFiltro, fn ($col) => $col->whereIn('nombre', $presentacionesFiltro)) as $pr)
             @php $tasaDisponible = $tasas->has($pr->fuente_tasa); @endphp
             <tr>
                 <td class="text-start">{{ $p->nombre }}</td>

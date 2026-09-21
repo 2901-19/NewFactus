@@ -17,7 +17,7 @@
 </head>
 <body>
     <h1>{{ \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')) }}</h1>
-    <p class="fecha">Lista de Precios{{ $categoria ? ' - '.$categoria->nombre : '' }} - Generado el {{ $fecha }}</p>
+    <p class="fecha">Lista de Precios{{ $categoria ? ' - '.$categoria->nombre : '' }}{{ $filtro ? ' - Presentación: '.implode(', ', $filtro) : '' }} - Generado el {{ $fecha }}</p>
     <table>
         <thead>
             <tr>
@@ -30,7 +30,7 @@
         </thead>
         <tbody>
             @foreach ($productos as $p)
-            @foreach ($p->presentaciones->where('activa', true) as $pr)
+            @foreach ($p->presentaciones->where('activa', true)->when($filtro, fn ($col) => $col->whereIn('nombre', $filtro)) as $pr)
             @php $tasaDisponiblePdf = $tasas->has($pr->fuente_tasa); @endphp
             <tr>
                 <td>{{ $p->nombre }}</td>

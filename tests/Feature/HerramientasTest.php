@@ -152,6 +152,131 @@ class HerramientasTest extends TestCase
         $response->assertDontSee('Azúcar');
     }
 
+    public function test_precios_filtra_por_presentacion()
+    {
+        $harina = Producto::factory()->create(['nombre' => 'Harina Pan']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Mayor',
+            'precio_usd' => 24.00,
+            'activa' => true,
+        ]);
+        $azucar = Producto::factory()->create(['nombre' => 'Azúcar']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $azucar->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 1.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios?presentacion[]=Mayor');
+
+        $response->assertStatus(200);
+        $response->assertSee('Harina Pan');
+        $response->assertDontSee('Azúcar');
+    }
+
+    public function test_precios_sin_filtro_incluye_todas_las_presentaciones()
+    {
+        $harina = Producto::factory()->create(['nombre' => 'Harina Pan']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Mayor',
+            'precio_usd' => 24.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios');
+
+        $response->assertStatus(200);
+        $response->assertSee('Harina Pan');
+        $response->assertSee('Unidad');
+        $response->assertSee('Mayor');
+    }
+
+    public function test_precios_json_respeta_filtro_presentacion()
+    {
+        $harina = Producto::factory()->create(['nombre' => 'Harina Pan']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Mayor',
+            'precio_usd' => 24.00,
+            'activa' => true,
+        ]);
+        $azucar = Producto::factory()->create(['nombre' => 'Azúcar']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $azucar->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 1.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios?export=json&presentacion[]=Mayor');
+        $response->assertStatus(200)->assertJsonCount(1);
+
+        $json = $response->json();
+        $this->assertEquals('Harina Pan', $json[0]['nombre']);
+        $this->assertEquals(['Mayor'], array_column($json[0]['presentaciones'], 'nombre'));
+
+        $combinado = $this->get('/herramientas/precios?export=json&presentacion[]=Mayor&presentacion[]=Unidad');
+        $combinado->assertStatus(200)->assertJsonCount(2);
+    }
+
+    public function test_precios_pdf_aplica_filtro_presentacion()
+    {
+        $harina = Producto::factory()->create(['nombre' => 'Harina Pan']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $harina->id,
+            'nombre' => 'Mayor',
+            'precio_usd' => 24.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios/pdf?presentacion[]=Mayor');
+
+        $response->assertOk();
+        $this->assertStringContainsString('mayor', (string) $response->headers->get('content-disposition'));
+        $this->assertStringNotContainsString('unidad', (string) $response->headers->get('content-disposition'));
+    }
+
+    public function test_precios_ignora_presentaciones_inexistentes()
+    {
+        Producto::factory()->create(['nombre' => 'Azúcar']);
+        $this->actingAs($this->admin);
+
+        $response = $this->get('/herramientas/precios?export=json&presentacion[]=Inexistente');
+
+        $response->assertStatus(200)->assertJsonCount(1);
+    }
+
     public function test_imprimir_precio_falla_sin_presentacion_id()
     {
         $producto = Producto::factory()->create();

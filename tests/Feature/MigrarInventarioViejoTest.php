@@ -271,6 +271,61 @@ class MigrarInventarioViejoTest extends TestCase
         $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'activo' => true]);
     }
 
+    public function test_export_json_genera_archivo_sin_modificar_la_bd()
+    {
+        $archivo = $this->crearArchivoSql([
+            $this->filaSql(1, 'Harina', 'Doña Belen 1Kg', 12, 20, 'Disponible', '', 0, 15.40, 0.77, 8, 0.08, 1, 0.81),
+            $this->filaSql(2, 'Harina', 'Doña Belen 1Kg Mayor', 13, 20, 'Disponible', '', 0, 15.40, 0.77, 5, 0.04, 2, 0.81),
+        ]);
+        file_put_contents($archivo, "\xEF\xBB\xBF".file_get_contents($archivo));
+        $salida = $this->directorioTemporal.'/precios.json';
+
+        $this->artisan('migrar:inventario-viejo', [
+            '--archivo' => $archivo,
+            '--export-json' => $salida,
+        ])->assertExitCode(0);
+
+        $this->assertEquals(0, Producto::count());
+        $this->assertEquals(0, ProductoPresentacion::count());
+
+        $data = json_decode(file_get_contents($salida), true);
+        $this->assertCount(1, $data['precios']);
+
+        $precio = $data['precios'][0];
+        $this->assertEquals('Doña Belen 1Kg Harina', $precio['nombre']);
+        $this->assertEquals(0.75, $precio['costo_usd']);
+        $this->assertCount(2, $precio['presentaciones']);
+
+        $unidad = $precio['presentaciones'][0];
+        $this->assertEquals('Unidad', $unidad['nombre']);
+        $this->assertEquals(1, $unidad['factor_conversion']);
+        $this->assertEquals(8, $unidad['margen']);
+        $this->assertEquals(0.81, $unidad['precio_usd']);
+        $this->assertEquals('usdt', $unidad['fuente_tasa']);
+        $this->assertTrue($unidad['activa']);
+
+        $mayor = $precio['presentaciones'][1];
+        $this->assertEquals('Mayor', $mayor['nombre']);
+        $this->assertEquals(20, $mayor['factor_conversion']);
+        $this->assertEquals(5, $mayor['margen']);
+        $this->assertEquals(15.8, $mayor['precio_usd']);
+        $this->assertEquals('promedio', $mayor['fuente_tasa']);
+    }
+
+    public function test_export_json_con_presentaciones_editadas_persisten_precio_calculado()
+    {
+        $archivo = $this->crearArchivoSql([
+            $this->filaSql(1, 'Refresco', 'Pepsi 2L', 18, 6, 'Disponible', '', 0, 8.01, 1.33, 13, 0.17, 0, 1.50),
+        ]);
+
+        $this->artisan('migrar:inventario-viejo', [
+            '--archivo' => $archivo,
+            '--export-json' => $this->directorioTemporal.'/pepsi.json',
+        ])->assertExitCode(0);
+
+        $this->assertEquals(0, Producto::count());
+    }
+
     public function test_estado_no_disponible()
     {
         $archivo = $this->crearArchivoSql([
