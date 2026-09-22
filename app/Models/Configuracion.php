@@ -37,6 +37,7 @@ class Configuracion extends Model
             static::claveCache('recordatorio_tasa_activo'),
             static::claveCache('recordatorio_tasa_hora1'),
             static::claveCache('recordatorio_tasa_hora2'),
+            static::claveCache('imprimir_al_facturar'),
         ]);
     }
 

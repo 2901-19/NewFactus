@@ -79,7 +79,7 @@
                 <div class="col-md-4 col-lg-3">
                     <div class="border rounded p-2">
                         <div class="small text-muted">{{ $nombresMetodo[$metodo] ?? $metodo }}</div>
-                        <div class="fw-bold">Bs {{ number_format($monto, 2) }}
+                        <div class="fw-bold">Bs {{ \App\Support\Moneda::n($monto, 2) }}
                             <small class="text-muted">({{ $totalDesglose > 0 ? round(($monto / $totalDesglose) * 100, 1) : 0 }}%)</small>
                         </div>
                     </div>
@@ -115,9 +115,9 @@
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td class="text-start">{{ $nombresMetodo[$f->metodo_pago] ?? $f->metodo_pago }}</td>
                 <td class="text-start">{{ $f->user->name ?? '—' }}</td>
-                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
-                <td>Bs {{ number_format($f->iva_bs, 2) }}</td>
-                <td>${{ number_format($f->total_usd, 2) }}</td>
+                <td>Bs {{ \App\Support\Moneda::n($f->total_bs) }}</td>
+                <td>Bs {{ \App\Support\Moneda::n($f->iva_bs) }}</td>
+                <td>${{ \App\Support\Moneda::n($f->total_usd) }}</td>
                 <td>{{ $f->fecha_venta?->format('d/m/Y') }}</td>
                 <td>
                     @if ($f->estado === 'credito')
@@ -136,10 +136,10 @@
         <tfoot>
             <tr class="fw-bold">
                 <td colspan="4" class="text-end">Totales:</td>
-                <td>Bs {{ number_format($kpis['total_bs'], 2) }}</td>
-                <td>Bs {{ number_format($kpis['iva_bs'], 2) }}</td>
-                <td>${{ number_format($kpis['total_usd'], 2) }}</td>
-                <td colspan="2">{{ number_format($kpis['cantidad']) }} facturas</td>
+                <td>Bs {{ \App\Support\Moneda::n($kpis['total_bs']) }}</td>
+                <td>Bs {{ \App\Support\Moneda::n($kpis['iva_bs']) }}</td>
+                <td>${{ \App\Support\Moneda::n($kpis['total_usd']) }}</td>
+                <td colspan="2">{{ \App\Support\Moneda::n($kpis['cantidad']) }} facturas</td>
             </tr>
         </tfoot>
     </table>

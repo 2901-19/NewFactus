@@ -39,6 +39,8 @@ class FacturaControllerTest extends TestCase
     {
         parent::setUp();
         $this->seed(PermisoSeeder::class);
+        Configuracion::updateOrCreate(['clave' => 'imprimir_al_facturar'], ['valor' => '0']);
+        Configuracion::olvidar('imprimir_al_facturar');
         $rolCajero = Rol::create(['nombre' => 'Cajero', 'slug' => 'cajero']);
         $rolCajero->permisos()->sync(
             Permiso::whereIn('slug', [

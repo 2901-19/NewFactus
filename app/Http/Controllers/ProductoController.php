@@ -7,6 +7,7 @@ use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Services\PrecioService;
+use App\Support\Moneda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -97,7 +98,7 @@ class ProductoController extends Controller
             return '<span class="badge bg-secondary">Sin inventario</span>';
         }
 
-        return number_format($producto->stock_actual, 2, ',', '.').' '.e($producto->unidad_medida ?? 'unidad');
+        return Moneda::n($producto->stock_actual).' '.e($producto->unidad_medida ?? 'unidad');
     }
 
     private function celdaPrecios(Producto $producto, $tasas): string
@@ -113,8 +114,8 @@ class ProductoController extends Controller
             $tasa = $tasas->get($pres->fuente_tasa);
             $html .= '<div class="small text-nowrap">'.e($pres->nombre).': ';
             if ($tasa) {
-                $html .= '<span class="fw-bold">Bs '.number_format($pres->precio_usd * $tasa, 2).'</span>'
-                    .' <small class="text-muted">($'.number_format($pres->precio_usd, 2).')</small>';
+                $html .= '<span class="fw-bold">Bs '.Moneda::n($pres->precio_usd * $tasa).'</span>'
+                    .' <small class="text-muted">($'.Moneda::n($pres->precio_usd).')</small>';
             } else {
                 $html .= '<span class="badge bg-danger" title="Configure la tasa \''.e($pres->fuente_tasa).'\' en Tasas de Cambio">Sin tasa</span>';
             }

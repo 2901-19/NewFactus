@@ -25,7 +25,7 @@
                 <td>{{ $p->unidad_medida ?? 'unidad' }}</td>
                 <td>
                     <span class="badge bg-danger">
-                        {{ number_format($p->stock_actual, 2, ',', '.') }}
+                        {{ \App\Support\Moneda::n($p->stock_actual) }}
                     </span>
                 </td>
             </tr>

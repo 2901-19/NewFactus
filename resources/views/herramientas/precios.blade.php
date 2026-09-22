@@ -54,12 +54,12 @@
                 <td>{{ $pr->nombre }}</td>
                 <td>
                     @if ($tasaDisponible)
-                        Bs {{ number_format($pr->precio_usd * $tasas[$pr->fuente_tasa], 2) }}
+                        Bs {{ \App\Support\Moneda::n($pr->precio_usd * $tasas[$pr->fuente_tasa]) }}
                     @else
                         <span class="badge bg-danger" title="Configure la tasa '{{ $pr->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
                     @endif
                 </td>
-                <td>${{ number_format($pr->precio_usd, 2) }}</td>
+                <td>${{ \App\Support\Moneda::n($pr->precio_usd) }}</td>
                 <td>{{ $p->impuesto?->nombre ?? 'No' }}</td>
                 <td class="text-center">
                     @if ($tasaDisponible)

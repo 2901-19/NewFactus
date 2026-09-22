@@ -34,8 +34,8 @@
             <tr>
                 <td>{{ $nombre }}</td>
                 <td>{{ $m['cantidad'] ?? 0 }}</td>
-                <td class="moneda">Bs {{ number_format($m['total_bs'] ?? 0, 2) }}</td>
-                <td class="moneda">${{ number_format($m['total_usd'] ?? 0, 2) }}</td>
+                <td class="moneda">Bs {{ \App\Support\Moneda::n($m['total_bs'] ?? 0) }}</td>
+                <td class="moneda">${{ \App\Support\Moneda::n($m['total_usd'] ?? 0) }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -43,8 +43,8 @@
             <tr class="totales">
                 <td>Total</td>
                 <td>{{ collect($mensual)->sum('cantidad') }}</td>
-                <td class="moneda">Bs {{ number_format(collect($mensual)->sum('total_bs'), 2) }}</td>
-                <td class="moneda">${{ number_format(collect($mensual)->sum('total_usd'), 2) }}</td>
+                <td class="moneda">Bs {{ \App\Support\Moneda::n(collect($mensual)->sum('total_bs')) }}</td>
+                <td class="moneda">${{ \App\Support\Moneda::n(collect($mensual)->sum('total_usd')) }}</td>
             </tr>
         </tfoot>
     </table>

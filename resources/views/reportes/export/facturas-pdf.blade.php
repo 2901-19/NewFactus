@@ -36,11 +36,11 @@
             <td class="titulo">Ticket promedio</td>
         </tr>
         <tr>
-            <td class="valor">Bs {{ number_format($kpis['total_bs'], 2) }}</td>
-            <td class="valor">${{ number_format($kpis['total_usd'], 2) }}</td>
-            <td class="valor">Bs {{ number_format($kpis['iva_bs'], 2) }}</td>
-            <td class="valor">{{ number_format($kpis['cantidad']) }}</td>
-            <td class="valor">Bs {{ number_format($kpis['ticket_promedio'], 2) }}</td>
+            <td class="valor">Bs {{ \App\Support\Moneda::n($kpis['total_bs']) }}</td>
+            <td class="valor">${{ \App\Support\Moneda::n($kpis['total_usd']) }}</td>
+            <td class="valor">Bs {{ \App\Support\Moneda::n($kpis['iva_bs']) }}</td>
+            <td class="valor">{{ \App\Support\Moneda::n($kpis['cantidad']) }}</td>
+            <td class="valor">Bs {{ \App\Support\Moneda::n($kpis['ticket_promedio']) }}</td>
         </tr>
     </table>
 
@@ -50,7 +50,7 @@
             @if ($monto > 0)
             <tr>
                 <td>{{ ucfirst(str_replace('_', ' ', $metodo)) }}</td>
-                <td class="moneda">Bs {{ number_format($monto, 2) }}</td>
+                <td class="moneda">Bs {{ \App\Support\Moneda::n($monto) }}</td>
             </tr>
             @endif
         @endforeach
@@ -74,8 +74,8 @@
                 <td>{{ $f->correlativo }}</td>
                 <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td>{{ ucfirst(str_replace('_', ' ', $f->metodo_pago)) }}</td>
-                <td class="moneda">Bs {{ number_format($f->total_bs, 2) }}</td>
-                <td class="moneda">${{ number_format($f->total_usd, 2) }}</td>
+                <td class="moneda">Bs {{ \App\Support\Moneda::n($f->total_bs) }}</td>
+                <td class="moneda">${{ \App\Support\Moneda::n($f->total_usd) }}</td>
                 <td>{{ $f->fecha_venta?->format('d/m/Y') }}</td>
                 <td>{{ ucfirst($f->estado) }}</td>
             </tr>
@@ -84,9 +84,9 @@
         <tfoot>
             <tr class="totales">
                 <td colspan="3" style="text-align:right">Totales:</td>
-                <td class="moneda">Bs {{ number_format($kpis['total_bs'], 2) }}</td>
-                <td class="moneda">${{ number_format($kpis['total_usd'], 2) }}</td>
-                <td colspan="2">{{ number_format($kpis['cantidad']) }} facturas</td>
+                <td class="moneda">Bs {{ \App\Support\Moneda::n($kpis['total_bs']) }}</td>
+                <td class="moneda">${{ \App\Support\Moneda::n($kpis['total_usd']) }}</td>
+                <td colspan="2">{{ \App\Support\Moneda::n($kpis['cantidad']) }} facturas</td>
             </tr>
         </tfoot>
     </table>

@@ -52,8 +52,8 @@
                 <tr>
                     <td class="text-start">{{ $nombre }}</td>
                     <td>{{ $m['cantidad'] ?? 0 }}</td>
-                    <td>Bs {{ number_format($m['total_bs'] ?? 0, 2) }}</td>
-                    <td>${{ number_format($m['total_usd'] ?? 0, 2) }}</td>
+                    <td>Bs {{ \App\Support\Moneda::n($m['total_bs'] ?? 0) }}</td>
+                    <td>${{ \App\Support\Moneda::n($m['total_usd'] ?? 0) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -61,8 +61,8 @@
             <tr>
                 <td>Total</td>
                 <td>{{ $totalCantidad }}</td>
-                <td>Bs {{ number_format($totalBs, 2) }}</td>
-                <td>${{ number_format($totalUsd, 2) }}</td>
+                <td>Bs {{ \App\Support\Moneda::n($totalBs) }}</td>
+                <td>${{ \App\Support\Moneda::n($totalUsd) }}</td>
             </tr>
         </tfoot>
     </table>

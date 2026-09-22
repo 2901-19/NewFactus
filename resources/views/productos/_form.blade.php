@@ -172,10 +172,10 @@
                                         </select>
                                     </td>
                                     <td class="text-end">
-                                        <span class="fw-bold" x-text="'$' + precioPor(i).toFixed(2)"></span>
+                                        <span class="fw-bold" x-text="'$' + fmtMoneda(precioPor(i))"></span>
                                     </td>
                                     <td class="text-end">
-                                        <span class="fw-bold" x-text="'Bs ' + (precioPor(i) * (tasaDe(pres.fuente_tasa) || 1)).toFixed(2)"></span>
+                                        <span class="fw-bold" x-text="'Bs ' + fmtMoneda(precioPor(i) * (tasaDe(pres.fuente_tasa) || 1))"></span>
                                     </td>
                                     <td class="text-center text-nowrap">
                                         <div class="d-inline-flex align-items-center gap-2">
@@ -224,7 +224,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label text-muted">Precio por kilo</label>
-                        <div class="fw-bold" x-text="'$ ' + precioKiloUsd.toFixed(2) + ' / Bs ' + precioKiloBs.toFixed(2)"></div>
+                        <div class="fw-bold" x-text="'$ ' + fmtMoneda(precioKiloUsd) + ' / Bs ' + fmtMoneda(precioKiloBs)"></div>
                     </div>
                 </div>
                 <input type="hidden" name="presentaciones[0][id]" :value="presentaciones.length ? (presentaciones[0].id || '') : ''">

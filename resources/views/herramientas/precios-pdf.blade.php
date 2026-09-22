@@ -37,12 +37,12 @@
                 <td>{{ $pr->nombre }}</td>
                 <td class="moneda">
                     @if ($tasaDisponiblePdf)
-                        Bs {{ number_format($pr->precio_usd * $tasas[$pr->fuente_tasa], 2) }}
+                        Bs {{ \App\Support\Moneda::n($pr->precio_usd * $tasas[$pr->fuente_tasa]) }}
                     @else
                         Sin tasa
                     @endif
                 </td>
-                <td class="moneda">${{ number_format($pr->precio_usd, 2) }}</td>
+                <td class="moneda">${{ \App\Support\Moneda::n($pr->precio_usd) }}</td>
                 <td class="iva">{{ $p->impuesto?->nombre ?? 'No' }}</td>
             </tr>
             @endforeach

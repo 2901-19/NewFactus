@@ -24,8 +24,8 @@
                 <td>{{ $f->correlativo }}</td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td class="text-start">{{ $f->user->usuario ?? 'Sin dato' }}</td>
-                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
-                <td>${{ number_format($f->total_usd, 2) }}</td>
+                <td>Bs {{ \App\Support\Moneda::n($f->total_bs) }}</td>
+                <td>${{ \App\Support\Moneda::n($f->total_usd) }}</td>
                 <td>{{ $f->fecha_venta }}</td>
                 <td>
                     @if ($f->estado === 'anulada')

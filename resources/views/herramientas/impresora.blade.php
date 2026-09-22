@@ -32,6 +32,15 @@
                             <small class="text-muted">Nombre exacto con que está compartida en Windows.</small>
                         </div>
                     </div>
+                    <div class="border-top pt-3 mt-2 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="imprimir_al_facturar" id="imprimirAlFacturar" value="1" {{ $imprimirAlFacturar === '1' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="imprimirAlFacturar">
+                                <strong>Imprimir ticket automáticamente al facturar</strong>
+                            </label>
+                            <small class="d-block text-muted">Al generar una factura desde el POS se imprime el ticket al momento. Si la impresora falla, la venta se conserva y se podrá imprimir desde Facturas.</small>
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </form>
             </div>

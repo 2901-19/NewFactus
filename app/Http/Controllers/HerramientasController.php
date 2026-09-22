@@ -351,8 +351,9 @@ class HerramientasController extends Controller
     public function imprimirConfig()
     {
         $config = $this->getPrinterConfig();
+        $imprimirAlFacturar = Configuracion::obtener('imprimir_al_facturar', '1');
 
-        return view('herramientas.impresora', compact('config'));
+        return view('herramientas.impresora', compact('config', 'imprimirAlFacturar'));
     }
 
     public function imprimirGuardar(Request $request)
@@ -375,6 +376,12 @@ class HerramientasController extends Controller
             storage_path('app/impresora.json'),
             json_encode($config, JSON_PRETTY_PRINT)
         );
+
+        Configuracion::updateOrCreate(
+            ['clave' => 'imprimir_al_facturar'],
+            ['valor' => $request->boolean('imprimir_al_facturar') ? '1' : '0']
+        );
+        Configuracion::olvidar('imprimir_al_facturar');
 
         return back()->with('success', 'Configuración de impresora guardada.');
     }
@@ -401,39 +408,13 @@ class HerramientasController extends Controller
 
     private function getPrinterConfig()
     {
-        $path = storage_path('app/impresora.json');
-        if (file_exists($path)) {
-            $config = json_decode(file_get_contents($path), true);
-            $config['port'] = (int) ($config['port'] ?? 9100);
-
-            return $config;
-        }
-
-        return [
-            'tipo' => 'network',
-            'host' => '192.168.1.100',
-            'port' => 9100,
-            'nombre' => '',
-        ];
+        return PrinterService::configuracion();
     }
 
     public function imprimirFactura($factura)
     {
         $factura = Factura::with('cliente', 'items.producto')->findOrFail($factura);
-        $items = $factura->items->map(function ($item) {
-            $nombre = $item->producto->nombre ?? 'Producto';
-            if ($item->presentacion_nombre) {
-                $nombre .= ' ('.$item->presentacion_nombre.')';
-            }
-
-            return [
-                'nombre' => $nombre,
-                'precio_unitario' => $item->precio_unitario_bs,
-                'cantidad' => $item->cantidad,
-                'total' => $item->subtotal,
-                'pesable' => $item->unidad_medida === 'kg',
-            ];
-        })->toArray();
+        $items = PrinterService::itemsDesdeFactura($factura);
 
         $config = $this->getPrinterConfig();
         $service = new PrinterService;
@@ -473,8 +454,6 @@ class HerramientasController extends Controller
             return back()->withErrors(['error' => "La presentación '{$presentacion->nombre}' no tiene la tasa de cambio '{$presentacion->fuente_tasa}' configurada. Configure la tasa en Tasas de Cambio."]);
         }
 
-        $negocio = Configuracion::obtener('nombre_negocio', config('app.name', 'Factus'));
-
         $config = $this->getPrinterConfig();
         $service = new PrinterService;
         $ok = $service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre']);
@@ -484,7 +463,6 @@ class HerramientasController extends Controller
         }
 
         $ok = $service->printPrecioProducto([
-            'negocio' => $negocio,
             'producto' => $producto->nombre,
             'presentacion' => $presentacion->nombre,
             'precio_bs' => $presentacion->precio_usd * $tasa,

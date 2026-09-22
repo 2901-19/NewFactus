@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Configuracion;
 use App\Models\TasaCambio;
+use App\Support\Moneda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -120,7 +121,7 @@ class TasaCambioController extends Controller
         ]);
 
         return redirect()->route('tasas-cambio.index')
-            ->with('success', 'Tasa '.$vigente->nombre.' actualizada a '.number_format($data['monto'], 2).' USD.');
+            ->with('success', 'Tasa '.$vigente->nombre.' actualizada a '.Moneda::n($data['monto']).' USD.');
     }
 
     public function toggleEstado(TasaCambio $tasa)

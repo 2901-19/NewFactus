@@ -62,7 +62,7 @@
                                     <span class="small text-muted text-nowrap" x-text="'≈ ' + pesoReferencia(index)"></span>
                                 </div>
                             </template>
-                            <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                            <span class="ms-auto small" x-text="'Bs ' + fmtMoneda(getBsPriceTotal(index))"></span>
                         </div>
                         <div class="text-muted small" x-show="factorDe(item) !== 1 && factorDe(item) > 0" x-text="descripcionPresentacion(index)"></div>
                     </div>
@@ -110,8 +110,8 @@
                         </div>
                     </div>
                     <div class="small mt-2" :class="pagosValidos ? 'text-success' : 'text-danger'">
-                        <span x-show="diferenciaPagos > 0.01">Falta Bs <span x-text="diferenciaPagos.toFixed(2)"></span></span>
-                        <span x-show="diferenciaPagos < -0.01">Sobran Bs <span x-text="Math.abs(diferenciaPagos).toFixed(2)"></span></span>
+                        <span x-show="diferenciaPagos > 0.01">Falta Bs <span x-text="fmtMoneda(diferenciaPagos)"></span></span>
+                        <span x-show="diferenciaPagos < -0.01">Sobran Bs <span x-text="fmtMoneda(Math.abs(diferenciaPagos))"></span></span>
                         <span x-show="Math.abs(diferenciaPagos) <= 0.01">Montos cuadrados con el total.</span>
                     </div>
                 </div>
@@ -139,28 +139,28 @@
                 <hr>
                 <div class="d-flex justify-content-between small">
                     <span>Subtotal Bs:</span>
-                    <span x-text="subtotalBs.toFixed(2)"></span>
+                    <span x-text="fmtMoneda(subtotalBs)"></span>
                 </div>
                 <div x-show="impuestosDesglose.length > 0">
                     <div class="small text-muted">Impuesto</div>
                     <template x-for="f in impuestosDesglose" :key="f.id">
                         <div class="d-flex justify-content-between small">
                             <span x-text="f.nombre + ' ' + f.porcentaje + '%'"></span>
-                            <span x-text="'= ' + f.bs.toFixed(2) + ' bs'"></span>
+                            <span x-text="'= ' + fmtMoneda(f.bs) + ' bs'"></span>
                         </div>
                     </template>
                     <div class="d-flex justify-content-between small fw-semibold">
                         <span>Total</span>
-                        <span x-text="'= ' + ivaBs.toFixed(2) + ' bs'"></span>
+                        <span x-text="'= ' + fmtMoneda(ivaBs) + ' bs'"></span>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between fw-bold">
                     <span>Total Bs:</span>
-                    <span x-text="totalBs.toFixed(2)"></span>
+                    <span x-text="fmtMoneda(totalBs)"></span>
                 </div>
                 <div class="d-flex justify-content-between small text-muted">
                     <span>Total USD:</span>
-                    <span x-text="'$' + totalUsdRef.toFixed(2)"></span>
+                    <span x-text="'$' + fmtMoneda(totalUsdRef)"></span>
                 </div>
                 <div x-show="pesablesIncompletos" class="small text-danger mt-2">
                     <i class="bi bi-exclamation-triangle"></i> Complete el monto en Bs de los productos pesables.
@@ -201,8 +201,8 @@
                                                 <span x-text="item.nombre"></span>
                                                 <span class="text-muted small" x-show="presNombre(index)" x-text="'(' + presNombre(index) + ')'"></span>
                                             </td>
-                                            <td class="num" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2) + (item.controla_inventario ? '' : '/kg')"></td>
-                                            <td class="num fw-semibold" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></td>
+                                            <td class="num" x-text="fmtMoneda(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)) + (item.controla_inventario ? '' : '/kg')"></td>
+                                            <td class="num fw-semibold" x-text="fmtMoneda(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index))"></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -212,7 +212,7 @@
                             <div class="totales">
                                 <div class="fila-total">
                                     <span>Subtotal <span x-text="tipoFactura === 'credito' ? 'USD' : 'Bs'"></span></span>
-                                    <span x-text="(tipoFactura === 'credito' ? subtotalBs / tasaRef : subtotalBs).toFixed(2)"></span>
+                                    <span x-text="fmtMoneda(tipoFactura === 'credito' ? subtotalBs / tasaRef : subtotalBs)"></span>
                                 </div>
                                 <template x-if="impuestosDesglose.length > 0">
                                     <div>
@@ -220,22 +220,22 @@
                                         <template x-for="f in impuestosDesglose" :key="f.id">
                                             <div class="fila-total">
                                                 <span x-text="f.nombre + ' ' + f.porcentaje + '%'"></span>
-                                                <span x-text="tipoFactura === 'credito' ? '= ' + (f.bs / tasaRef).toFixed(2) + ' usd' : '= ' + f.bs.toFixed(2) + ' bs'"></span>
+                                                <span x-text="tipoFactura === 'credito' ? '= ' + fmtMoneda(f.bs / tasaRef) + ' usd' : '= ' + fmtMoneda(f.bs) + ' bs'"></span>
                                             </div>
                                         </template>
                                         <div class="fila-total fw-semibold">
                                             <span>Total</span>
-                                            <span x-text="tipoFactura === 'credito' ? '= ' + ivaUsd.toFixed(2) + ' usd' : '= ' + ivaBs.toFixed(2) + ' bs'"></span>
+                                            <span x-text="tipoFactura === 'credito' ? '= ' + fmtMoneda(ivaUsd) + ' usd' : '= ' + fmtMoneda(ivaBs) + ' bs'"></span>
                                         </div>
                                     </div>
                                 </template>
                                 <div class="total-final">
                                     <span class="total-label">TOTAL <span x-text="tipoFactura === 'credito' ? 'USD' : 'Bs'"></span></span>
-                                    <span class="total-valor" x-text="(tipoFactura === 'credito' ? totalUsdRef : totalBs).toFixed(2)"></span>
+                                    <span class="total-valor" x-text="fmtMoneda(tipoFactura === 'credito' ? totalUsdRef : totalBs)"></span>
                                 </div>
                                 <div class="fila-total" x-show="tipoFactura !== 'credito'">
                                     <span>Total USD</span>
-                                    <span>$ <span x-text="totalUsdRef.toFixed(2)"></span></span>
+                                    <span>$ <span x-text="fmtMoneda(totalUsdRef)"></span></span>
                                 </div>
                                 <div class="fila-total" x-show="tipoFactura !== 'credito' && metodoPago !== 'mixto'">
                                     <span>Pago</span>
@@ -247,11 +247,11 @@
                                         <div class="seccion-titulo">Pago Mixto</div>
                                         <div class="fila-total">
                                             <span x-text="nombreMetodo(pago1.metodo)"></span>
-                                            <span x-text="'Bs ' + (parseFloat(pago1.monto) || 0).toFixed(2)"></span>
+                                            <span x-text="'Bs ' + fmtMoneda(parseFloat(pago1.monto) || 0)"></span>
                                         </div>
                                         <div class="fila-total">
                                             <span x-text="nombreMetodo(pago2.metodo)"></span>
-                                            <span x-text="'Bs ' + (parseFloat(pago2.monto) || 0).toFixed(2)"></span>
+                                            <span x-text="'Bs ' + fmtMoneda(parseFloat(pago2.monto) || 0)"></span>
                                         </div>
                                     </div>
                                 </template>
@@ -262,7 +262,7 @@
                                 <template x-if="tasaReferenciaInfo">
                                     <div class="fila-total">
                                         <span>Tasa ref</span>
-                                        <span x-text="tasaReferenciaInfo.nombre + ' ' + tasaReferenciaInfo.monto.toFixed(2)"></span>
+                                        <span x-text="tasaReferenciaInfo.nombre + ' ' + fmtMoneda(tasaReferenciaInfo.monto)"></span>
                                     </div>
                                 </template>
                                 <template x-if="!tasaReferenciaInfo">
@@ -393,10 +393,10 @@ document.addEventListener('alpine:init', () => {
                                         : 'Sin presentaciones activas';
                                     return '<span class="badge bg-danger" title="' + title + '">Sin tasa</span>';
                                 }
-                                let html = '<strong>Bs ' + Number(data).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>';
+                                let html = '<strong>Bs ' + fmtMoneda(data) + '</strong>';
                                 const usd = Number(row.precio_usd_bs);
                                 if (!isNaN(usd) && usd > 0) {
-                                    html += '<small class="text-muted">($' + usd.toFixed(2) + ')</small>';
+                                    html += '<small class="text-muted">($' + fmtMoneda(usd) + ')</small>';
                                 }
                                 return html;
                             },
@@ -495,7 +495,7 @@ document.addEventListener('alpine:init', () => {
             const it = this.carrito[index];
             if (!it) return '';
             const cantidad = parseFloat(it.cantidad) || 0;
-            return cantidad > 0 ? cantidad.toFixed(3) + ' kg' : '—';
+            return cantidad > 0 ? fmtMoneda(cantidad, 3) + ' kg' : '—';
         },
 
         get pesablesIncompletos() {
@@ -781,7 +781,11 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
+                    if (data.impreso === false) {
+                        this.mostrarAviso('Factura N° ' + data.correlativo + ' generada, pero no se imprimió el ticket. Revise la impresora.');
+                    } else {
+                        this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
+                    }
                     this.carrito = [];
                     this.metodoPago = 'efectivo';
                     this.tipoFactura = 'contado';
@@ -800,6 +804,10 @@ document.addEventListener('alpine:init', () => {
 
         mostrarExito(msg) {
             Swal.fire({ icon: 'success', title: 'Éxito', text: msg, timer: 3000, showConfirmButton: false });
+        },
+
+        mostrarAviso(msg) {
+            Swal.fire({ icon: 'warning', title: 'Aviso', text: msg, timer: 5000, showConfirmButton: false });
         },
 
         mostrarError(msg) {

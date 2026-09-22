@@ -22,14 +22,14 @@
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Sin dato' }}</td>
-                <td>${{ number_format($f->total_usd, 2) }}</td>
+                <td>${{ \App\Support\Moneda::n($f->total_usd) }}</td>
                 <td>
                     @if ($f->estado_credito === 'cancelado')
-                        <span class="text-muted" title="Pagado: Bs {{ number_format($f->pago_bs, 2) }} el {{ $f->fecha_pago?->format('d/m/Y') ?? '' }}">
-                            <i class="bi bi-check2-circle"></i> Bs {{ number_format($f->pago_bs, 2) }}
+                        <span class="text-muted" title="Pagado: Bs {{ \App\Support\Moneda::n($f->pago_bs) }} el {{ $f->fecha_pago?->format('d/m/Y') ?? '' }}">
+                            <i class="bi bi-check2-circle"></i> Bs {{ \App\Support\Moneda::n($f->pago_bs) }}
                         </span>
                     @elseif ($tasaVigente)
-                        Bs {{ number_format($f->total_usd * $tasaVigente, 2) }}
+                        Bs {{ \App\Support\Moneda::n($f->total_usd * $tasaVigente) }}
                     @else
                         <span class="text-muted" title="Sin tasa de referencia configurada">—</span>
                     @endif
@@ -48,7 +48,7 @@
                     </button>
                     @if ($f->estado_credito === 'pendiente')
                         @if ($tasaVigente)
-                            <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ number_format($f->total_usd, 2) }}" data-bs="{{ number_format($f->total_usd * $tasaVigente, 2) }}">
+                            <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ \App\Support\Moneda::n($f->total_usd) }}" data-bs="{{ \App\Support\Moneda::n($f->total_usd * $tasaVigente) }}">
                                 <i class="bi bi-check-lg"></i> Cobrar
                             </button>
                         @else

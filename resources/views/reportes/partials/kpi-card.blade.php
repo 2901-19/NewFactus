@@ -4,11 +4,11 @@
             <div class="small text-muted text-uppercase fw-semibold">{{ $label }}</div>
             <div class="fs-4 fw-bold">
                 @if (($formato ?? 'entero') === 'moneda')
-                    Bs {{ number_format($valor, 2) }}
+                    Bs {{ \App\Support\Moneda::n($valor, 2) }}
                 @elseif (($formato ?? 'entero') === 'usd')
-                    ${{ number_format($valor, 2) }}
+                    ${{ \App\Support\Moneda::n($valor, 2) }}
                 @else
-                    {{ number_format($valor) }}
+                    {{ \App\Support\Moneda::n($valor) }}
                 @endif
             </div>
         </div>

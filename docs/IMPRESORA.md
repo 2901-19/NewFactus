@@ -91,10 +91,15 @@ Si PHP no puede acceder a la impresora, es un problema de permisos.
 2. Clic **"Imprimir Prueba"**.
 3. Debe imprimir:
    ```
-                  FACTUS
-              Esperanza Veliz
-              Impresion exitosa!
+                   NEW FACTUS
+               Esperanza Veliz
+                 123456789012345678901234567890123456789012345678
+            Acentos: á é í ó ú ñ Ñ ¿ ¡ ü Á
+                  PREC U   PREC T
+          1234,56    10,50    21,00
+               Impresion exitosa!
    ```
+   La regla `1..48` (y `9..1` invertida) sirve para calibrar: el ticket usa 48 celdas de ancho (papel 80 mm, fuente normal). Cada numeral debe alinear con su columna: si se corre o se corta el borde, verificar el driver y el ancho del rollo. La linea de acentos confirma la que transliteracion queda bien centrada.
 4. Si imprime → listo.
 5. Si no imprime → ver seccion Solucion de problemas.
 
@@ -106,8 +111,9 @@ Si PHP no puede acceder a la impresora, es un problema de permisos.
 2. Seleccionar productos, definir cantidades.
 3. Agregar un cliente o elegir uno existente.
 4. Pulsa **"Cobrar / Facturar"**.
-5. En la factura registrada, buscar el boton **"Imprimir Ticket"**.
-6. Debe salir el recibo completo: nombre del negocio, correlativo, fecha, cajero, productos, totales en Bs/USD, leyenda de credito si aplica, y corte parcial al final.
+5. La factura se **imprime automaticamente** al guardarse si el interruptor "Imprimir ticket automaticamente al facturar" esta activo (Herramientas → Configuracion Impresora, activo por defecto). Si la impresora falla, la venta **no se pierde**: se guarda igual y el POS muestra un aviso rojo ambar.
+6. En la factura registrada, el boton **"Imprimir Ticket"** permite reimprimir en cualquier momento.
+7. El recibo imprime: nombre del negocio, correlativo, fecha, cajero, productos (4 columnas justificadas: descripcion, cant, precio USD, precio Bs), totales en Bs/USD, leyenda de credito si aplica, y corte parcial al final. Todos los montos van con formato español (`1.234,56`).
 
 ---
 
@@ -152,3 +158,8 @@ Si aparece → todo esta bien configurado en Windows.
 - La conexion por USB funciona a traves del driver de Windows compartido (`WindowsPrintConnector`).
 - La impresora debe estar en el **mismo equipo** donde corre PHP (`php artisan serve`).
 - Si en el futuro se necesita impresion remota por red, se puede usar la opcion `Red (TCP/IP)` del formulario configurando IP + puerto 9100.
+- **Diseno del ticket**: 48 celdas de ancho (80 mm). Las columnas de productos son dinamicas por fila: `Descripcion = 48 - Cant - PrecioUSD - PrecioBS` (minimo 12 celdas); el nombre se envuelve por palabras y los precios quedan alineados a la derecha en todo momento. Los totales se imprimen a tamano doble (24 celdas) en una sola linea, con fallback a `(1,2)` si el monto es muy largo.
+- **Codificacion**: todo texto del usuario (nombres de producto, cliente, negocio) pasa por `Str::ascii()` antes de imprimirse: 1 caracter = 1 celda, sin desbordes ni saltos de posicion. Lo que se ve con caracteres "raros" es la transliteracion (ej: `ñ` → `n`, `á` → `a`), necesaria para que las columnas cuadren.
+- Los montos del ticket se imprimen con formato español (`1.234,56`).
+- Impresion automatica: la imprime `FacturaController::store()` despues de confirmar la factura en la BD (`imprimir_al_facturar` en `Configuracion`, toggle en Herramientas → Configuracion Impresora). Si no hay impresora configurada o falla, responde con `impreso=false` y el POS muestra un aviso sin afectar la venta.
+- Etiqueta de precio: sin nombre del negocio; producto en negrita tamano 2x centrado (max 24 celdas por linea, se envuelve) y el precio `Bs X` en tamano adaptativo (`4x4` si ≤ 12 caracteres, luego `3x3`, `2x2`, `1x1`), siempre centrado y completo.

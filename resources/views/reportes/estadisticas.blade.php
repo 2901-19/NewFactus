@@ -77,8 +77,8 @@
                     <div class="col-6 col-md-4">
                         <div class="border rounded p-2" style="background-color:{{ $colores[$nombre] }}18; border-color:{{ $colores[$nombre] }}">
                             <div class="small text-muted">{{ $nombre }}</div>
-                            <div class="fw-bold">Bs {{ number_format($res['bs'], 2) }}</div>
-                            <div class="small">{{ number_format($res['unidades']) }} unidades</div>
+                            <div class="fw-bold">Bs {{ \App\Support\Moneda::n($res['bs']) }}</div>
+                            <div class="small">{{ \App\Support\Moneda::n($res['unidades']) }} unidades</div>
                         </div>
                     </div>
                     @endforeach
@@ -111,7 +111,7 @@
                         <tr>
                             <td class="text-start">{{ $c['nombre'] }}</td>
                             <td>{{ $c['facturas'] }}</td>
-                            <td>Bs {{ number_format($c['total_bs'], 2) }}</td>
+                            <td>Bs {{ \App\Support\Moneda::n($c['total_bs']) }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="3" class="text-center text-muted">Sin datos</td></tr>
@@ -125,7 +125,7 @@
         <div class="card h-100 border-danger">
             <div class="card-header"><i class="bi bi-credit-card"></i> Créditos pendientes</div>
             <div class="card-body d-flex flex-column justify-content-center text-center">
-                <div class="fs-4 fw-bold text-danger">Bs {{ number_format($creditos->total_bs, 2) }}</div>
+                <div class="fs-4 fw-bold text-danger">Bs {{ \App\Support\Moneda::n($creditos->total_bs) }}</div>
                 <div class="text-muted">{{ $creditos->cantidad }} facturas por cobrar</div>
             </div>
         </div>

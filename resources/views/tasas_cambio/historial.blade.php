@@ -47,14 +47,14 @@
                 <tr>
                     <td>{{ $fila->fecha }} <small class="text-muted d-block">{{ $fila->created_at->format('H:i') }}</small></td>
                     <td>{{ $fila->nombre ?: ucfirst($fila->tipo) }}</td>
-                    <td>{{ number_format($fila->monto, 2, '.', '') }} Bs</td>
+                    <td>{{ \App\Support\Moneda::n($fila->monto) }} Bs</td>
                     <td>
                         @if ($fila->variacion === null)
                             <span class="text-muted">—</span>
                         @elseif ($fila->variacion > 0)
-                            <span class="text-success"><i class="bi bi-arrow-up-right"></i> +{{ number_format($fila->variacion, 2) }}%</span>
+                            <span class="text-success"><i class="bi bi-arrow-up-right"></i> +{{ \App\Support\Moneda::n($fila->variacion) }}%</span>
                         @elseif ($fila->variacion < 0)
-                            <span class="text-danger"><i class="bi bi-arrow-down-right"></i> {{ number_format($fila->variacion, 2) }}%</span>
+                            <span class="text-danger"><i class="bi bi-arrow-down-right"></i> {{ \App\Support\Moneda::n($fila->variacion) }}%</span>
                         @else
                             <span class="text-muted">0.00%</span>
                         @endif

@@ -94,7 +94,7 @@ class DashboardTest extends TestCase
         $response->assertViewHas('tasasVigentes', fn ($t) => $t->has('promedio'));
         $response->assertViewHas('metodosHoy', fn ($m) => $m['efectivo'] == 10000);
         $response->assertSee('Promedio:');
-        $response->assertSee('$100.00');
+        $response->assertSee('$100,00');
     }
 
     public function test_credito_pendiente_hoy_no_cuenta_como_ingreso()

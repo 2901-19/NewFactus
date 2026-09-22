@@ -48,7 +48,7 @@
             @endif
             <div class="d-flex justify-content-between">
                 <span class="recibo-meta-label">Tasa de cambio</span>
-                <span class="recibo-meta-valor">Bs {{ number_format($tasaCambio, 2) }}</span>
+                <span class="recibo-meta-valor">Bs {{ \App\Support\Moneda::n($tasaCambio) }}</span>
             </div>
         </div>
 
@@ -74,12 +74,12 @@
                         @if ($item->presentacion_nombre)<small class="text-muted"> ({{ $item->presentacion_nombre }})</small>@endif
                     </td>
                     @if ($esCredito)
-                    <td class="num">{{ $esPesable ? '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) . ' /kg' : '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
-                    <td class="num fw-semibold">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</td>
+                    <td class="num">{{ $esPesable ? '$ ' . \App\Support\Moneda::n($item->precio_unitario_bs / $tasaCambio) . ' /kg' : '$ ' . \App\Support\Moneda::n($item->precio_unitario_bs / $tasaCambio) }}</td>
+                    <td class="num fw-semibold">$ {{ \App\Support\Moneda::n($item->subtotal / $tasaCambio) }}</td>
                     @else
-                    <td class="num">{{ $esPesable ? number_format($item->precio_unitario_bs, 2) . ' /kg' : number_format($item->precio_unitario_bs, 2) }}</td>
-                    <td class="num">{{ $esPesable ? '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) . ' /kg' : '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
-                    <td class="num fw-semibold">{{ number_format($item->subtotal, 2) }}</td>
+                    <td class="num">{{ $esPesable ? \App\Support\Moneda::n($item->precio_unitario_bs) . ' /kg' : \App\Support\Moneda::n($item->precio_unitario_bs) }}</td>
+                    <td class="num">{{ $esPesable ? '$ ' . \App\Support\Moneda::n($item->precio_unitario_bs / $tasaCambio) . ' /kg' : '$ ' . \App\Support\Moneda::n($item->precio_unitario_bs / $tasaCambio) }}</td>
+                    <td class="num fw-semibold">{{ \App\Support\Moneda::n($item->subtotal) }}</td>
                     @endif
                 </tr>
                 @endforeach
@@ -91,20 +91,20 @@
         <div class="totales">
             <div class="fila-total">
                 <span>{{ $esCredito ? 'Subtotal USD' : 'Subtotal Bs' }}</span>
-                <span>{{ $esCredito ? '$ ' . number_format($factura->subtotal_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->subtotal_bs, 2) }}</span>
+                <span>{{ $esCredito ? '$ ' . \App\Support\Moneda::n($factura->subtotal_bs / $tasaCambio) : 'Bs ' . \App\Support\Moneda::n($factura->subtotal_bs) }}</span>
             </div>
             <div class="fila-total">
                 <span>Impuesto</span>
-                <span>{{ $esCredito ? '$ ' . number_format($factura->iva_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->iva_bs, 2) }}</span>
+                <span>{{ $esCredito ? '$ ' . \App\Support\Moneda::n($factura->iva_bs / $tasaCambio) : 'Bs ' . \App\Support\Moneda::n($factura->iva_bs) }}</span>
             </div>
             <div class="total-final">
                 <span class="total-label">{{ $esCredito ? 'Total USD' : 'Total Bs' }}</span>
-                <span class="total-valor">{{ $esCredito ? '$ ' . number_format($factura->total_usd, 2) : 'Bs ' . number_format($factura->total_bs, 2) }}</span>
+                <span class="total-valor">{{ $esCredito ? '$ ' . \App\Support\Moneda::n($factura->total_usd) : 'Bs ' . \App\Support\Moneda::n($factura->total_bs) }}</span>
             </div>
             @if (!$esCredito)
             <div class="fila-total">
                 <span>Total USD</span>
-                <span>$ {{ number_format($factura->total_usd, 2) }}</span>
+                <span>$ {{ \App\Support\Moneda::n($factura->total_usd) }}</span>
             </div>
             @endif
             @if ($factura->metodo_pago === 'mixto' && !$esCredito)
@@ -113,7 +113,7 @@
             @foreach ($factura->detalle_pago ?? [] as $pago)
             <div class="fila-total">
                 <span>{{ $nombresMetodo[$pago['metodo']] ?? $pago['metodo'] }}</span>
-                <span>Bs {{ number_format($pago['monto'], 2) }}</span>
+                <span>Bs {{ \App\Support\Moneda::n($pago['monto']) }}</span>
             </div>
             @endforeach
             @elseif ($factura->estado === 'credito' && $factura->estado_credito === 'cancelado')
@@ -133,11 +133,11 @@
             @if ($factura->estado_credito === 'cancelado')
             <div class="fila-total">
                 <span>Crédito cobrado (US$)</span>
-                <span>$ {{ number_format($factura->total_usd, 2) }}</span>
+                <span>$ {{ \App\Support\Moneda::n($factura->total_usd) }}</span>
             </div>
             <div class="fila-total">
                 <span>Cobrado en Bs</span>
-                <span>Bs {{ number_format($factura->pago_bs, 2) }}</span>
+                <span>Bs {{ \App\Support\Moneda::n($factura->pago_bs) }}</span>
             </div>
             <div class="fila-total">
                 <span>Fecha de cobro</span>
@@ -146,7 +146,7 @@
             @else
             <div class="fila-total">
                 <span>Crédito pendiente (US$)</span>
-                <span>$ {{ number_format($factura->total_usd, 2) }}</span>
+                <span>$ {{ \App\Support\Moneda::n($factura->total_usd) }}</span>
             </div>
             @endif
             @endif

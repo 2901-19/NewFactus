@@ -11,8 +11,10 @@ use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
 use App\Services\CatalogoService;
 use App\Services\ImpuestoService;
+use App\Services\PrinterService;
 use App\Services\StockService;
 use App\Services\TasaCambioService;
+use App\Support\Moneda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -314,10 +316,36 @@ class FacturaController extends Controller
 
             DB::commit();
 
+            $impreso = false;
+            $errorImpresion = null;
+
+            if ((string) Configuracion::obtener('imprimir_al_facturar', '1') === '1') {
+                try {
+                    $configPrinter = PrinterService::configuracion();
+                    $service = new PrinterService;
+                    if ($service->connect($configPrinter['tipo'], $configPrinter['host'], $configPrinter['port'], $configPrinter['nombre'])) {
+                        $factura->load('items.producto');
+                        $impreso = $service->printReceipt($factura, PrinterService::itemsDesdeFactura($factura), auth()->user()->usuario);
+                    }
+
+                    if (! $impreso) {
+                        $errorImpresion = 'no_impreso';
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Impresión automática de factura falló', [
+                        'factura_id' => $factura->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errorImpresion = 'no_impreso';
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'correlativo' => $correlativo,
                 'factura_id' => $factura->id,
+                'impreso' => $impreso,
+                'impresion_error' => $errorImpresion,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -374,7 +402,7 @@ class FacturaController extends Controller
         ]);
 
         return redirect()->route('facturas.creditos')
-            ->with('success', 'Crédito N° '.$factura->correlativo.' cobrado correctamente: Bs '.number_format($pagoBs, 2).' (US$ '.number_format($pagoUsd, 2).').');
+            ->with('success', 'Crédito N° '.$factura->correlativo.' cobrado correctamente: Bs '.Moneda::n($pagoBs).' (US$ '.Moneda::n($pagoUsd).').');
     }
 
     private function generarCorrelativo(): string

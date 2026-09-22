@@ -265,7 +265,41 @@ Restauración (en una BD vacía `factus_esperanza_veliz`):
 
 > Recomendado respaldar al final de cada jornada y guardar el archivo en otra unidad o medio externo.
 
-## 8. Checklist final de verificación
+## 8. Actualizar el sistema en la PC del cliente
+
+> La PC del cliente **no tiene** Git/Composer/Node, así que la actualización es reemplazar la carpeta del
+> proyecto con la copia nueva. Antes de empezar: **respaldo** (sección 7) y cerrar FACTUS (doble clic → se apaga todo).
+
+1. **Copiar los archivos nuevos** de la máquina de desarrollo (o del ZIP/red) de forma que **reemplacen**
+   la carpeta del proyecto en la PC del cliente. Los archivos que generan los assets ya vienen compilados
+   en `public/build` (`npm run build` se corre en desarrollo).
+2. **NO sobrescribir el `.env`** del cliente. El proyecto incluye un `.env` de desarrollo (PostgreSQL,
+   `APP_DEBUG=false`) y el de la PC tiene su propia `APP_KEY` y credenciales. Al copiar, **excluir** `.env`
+   (y `.env.example`). Si se respetaron los permisos, conservar el que ya existía; tras el copiado verificar
+   que `DB_DATABASE=factus_esperanza_veliz` y las credenciales sigan siendo las del cliente.
+3. **NO sobrescribir `launcher/config.json`** si el cliente tiene rutas/puertos propios (`phpPath`,
+   `appPath`, `browser`, `postgresPort`).
+4. **Restaurar subidas**: los archivos de la copia nueva reemplazan `storage/app/public/uploads`, así que
+   si la PC guarda fotos/importados ahí, respaldar esa carpeta antes y volverla a colocar después (los
+   archivos que viven en la BD, como las facturas, no se pierden porque están en PostgreSQL).
+5. **Migraciones pendientes**: con la PC del cliente (o por escritorio remoto con el lanzador abierto)
+   ejecutar en la carpeta del proyecto:
+   ```powershell
+   php artisan migrate --force
+   ```
+   (interactivo o forzado; las tablas nuevas son aditivas y no tocan los datos existentes).
+6. **Limpiar caches** por si quedaron viejas en `storage/framework/cache`:
+   ```powershell
+   php artisan config:clear; php artisan view:clear; php artisan cache:clear
+   ```
+7. Abrir FACTUS, iniciar sesión y verificar: login, un cobro en el POS, **impresión automática del ticket**
+   (si el interruptor de "Imprimir ticket automáticamente al facturar" está activo) y los mis montos ahora
+   con formato español (`1.234,56`).
+
+> Si la versión nueva cambia la BD, la orden siempre es: respaldo → respaldo → copiar archivos (sin `.env`
+> ni `launcher/config.json`) → `migrate --force` → probar.
+
+## 9. Checklist final de verificación
 
 - [ ] `php artisan migrate` no muestra migraciones pendientes (incluye `lanzador_sesiones`).
 - [ ] Login con `admin`/`admin123` funciona.
@@ -277,7 +311,7 @@ Restauración (en una BD vacía `factus_esperanza_veliz`):
 - [ ] Al cerrar la ventana no quedan procesos (`Get-NetTCPConnection -LocalPort 8000 -State Listen`
       no muestra nada; `Get-Process php` no lista procesos).
 
-## 9. Solución de problemas rápidos
+## 10. Solución de problemas rápidos
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|

@@ -44,13 +44,13 @@
                         <span class="modulo-icono text-primary"><i class="bi bi-cart3"></i></span>
                     </div>
                     <div class="metrica-valor">{{ $ventasHoy }}</div>
-                    <div class="metrica-secundaria">Bs {{ number_format($totalHoyBs, 2) }} &middot; ${{ number_format($totalHoyUsd, 2) }}</div>
+                    <div class="metrica-secundaria">Bs {{ \App\Support\Moneda::n($totalHoyBs) }} &middot; ${{ \App\Support\Moneda::n($totalHoyUsd) }}</div>
                 </div>
                 <div class="mt-3">
                     @if ($variacionHoy !== null)
                         <span class="tendencia {{ $variacionHoy >= 0 ? 'tendencia-alta' : 'tendencia-baja' }}">
                             <i class="bi {{ $variacionHoy >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
-                            {{ number_format(abs($variacionHoy), 1) }}% vs ayer
+                            {{ \App\Support\Moneda::n(abs($variacionHoy), 1) }}% vs ayer
                         </span>
                     @else
                         <span class="tendencia">Sin ventas ayer</span>
@@ -68,13 +68,13 @@
                         <span class="modulo-icono text-success"><i class="bi bi-graph-up-arrow"></i></span>
                     </div>
                     <div class="metrica-valor">{{ $ventasMes }}</div>
-                    <div class="metrica-secundaria">Bs {{ number_format($totalMesBs, 2) }} &middot; ${{ number_format($totalMesUsd, 2) }}</div>
+                    <div class="metrica-secundaria">Bs {{ \App\Support\Moneda::n($totalMesBs) }} &middot; ${{ \App\Support\Moneda::n($totalMesUsd) }}</div>
                 </div>
                 <div class="mt-3">
                     @if ($variacionMes !== null)
                         <span class="tendencia {{ $variacionMes >= 0 ? 'tendencia-alta' : 'tendencia-baja' }}">
                             <i class="bi {{ $variacionMes >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}"></i>
-                            {{ number_format(abs($variacionMes), 1) }}% vs mes anterior
+                            {{ \App\Support\Moneda::n(abs($variacionMes), 1) }}% vs mes anterior
                         </span>
                     @else
                         <span class="tendencia">Sin ventas el mes anterior</span>
@@ -92,7 +92,7 @@
                         <span class="modulo-icono text-warning"><i class="bi bi-credit-card"></i></span>
                     </div>
                     <div class="metrica-valor">{{ $creditosPendientes }}</div>
-                    <div class="metrica-secundaria">Bs {{ number_format($totalCreditosPendientesBs, 2) }}</div>
+                    <div class="metrica-secundaria">Bs {{ \App\Support\Moneda::n($totalCreditosPendientesBs) }}</div>
                 </div>
                 @if ($tienePermiso('gestionar-creditos') && $creditosPendientes > 0)
                     <a href="{{ route('facturas.creditos') }}" class="tendencia d-inline-flex mt-3 text-decoration-none">
@@ -129,7 +129,7 @@
             <span class="tira-caption"><i class="bi bi-currency-exchange me-1"></i>Tasas vigentes</span>
             @foreach ($tasasVigentes as $tasa)
                 <span class="tasa-chip">
-                    {{ $tasa->nombre ?: ucfirst($tasa->tipo) }}: <strong>{{ number_format($tasa->monto, 2) }}</strong>
+                    {{ $tasa->nombre ?: ucfirst($tasa->tipo) }}: <strong>{{ \App\Support\Moneda::n($tasa->monto) }}</strong>
                 </span>
             @endforeach
         </div>
@@ -188,7 +188,7 @@
                             <tr>
                                 <td>{{ $f->correlativo }}</td>
                                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
-                                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
+                                <td>Bs {{ \App\Support\Moneda::n($f->total_bs) }}</td>
                                 <td>
                                     @if ($esAnulada($f))
                                         <span class="badge bg-danger">Anulada</span>
@@ -237,7 +237,7 @@
                                 <tr>
                                     <td>{{ $c->correlativo }}</td>
                                     <td class="text-start">{{ $c->cliente->nombre ?? 'Sin dato' }}</td>
-                                    <td>${{ number_format($c->total_usd, 2) }}</td>
+                                    <td>${{ \App\Support\Moneda::n($c->total_usd) }}</td>
                                     <td class="text-center">
                                         <a href="{{ route('facturas.creditos') }}" class="btn btn-sm btn-success" title="Cobrar">
                                             <i class="bi bi-check-lg"></i>
@@ -252,7 +252,7 @@
                 </div>
                 @if ($creditosPendientes > 0)
                     <div class="card-footer small text-muted">
-                        Total pendiente: Bs {{ number_format($totalCreditosPendientesBs, 2) }} en {{ $creditosPendientes }} factura(s)
+                        Total pendiente: Bs {{ \App\Support\Moneda::n($totalCreditosPendientesBs) }} en {{ $creditosPendientes }} factura(s)
                     </div>
                 @endif
             </div>
@@ -280,7 +280,7 @@
                             @forelse ($productosStockBajo as $p)
                                 <tr>
                                     <td>{{ $p->nombre }}</td>
-                                    <td><span class="badge bg-danger">{{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}</span></td>
+                                    <td><span class="badge bg-danger">{{ \App\Support\Moneda::n($p->stock_actual) }} {{ $p->unidad_medida ?? 'unidad' }}</span></td>
                                 </tr>
                             @empty
                                 <tr><td colspan="2" class="text-center text-muted">Sin productos con existencia baja.</td></tr>

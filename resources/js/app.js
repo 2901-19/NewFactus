@@ -13,6 +13,13 @@ window.jQuery = $;
 window.Swal = Swal;
 window.Chart = Chart;
 
+// Formato de números local (español: 1.234,56). Excluir inputs type=number.
+window.fmtMoneda = (valor, decimales = 2) =>
+    Number(valor).toLocaleString('es-VE', {
+        minimumFractionDigits: decimales,
+        maximumFractionDigits: decimales,
+    });
+
 // SweetAlert2 config por defecto
 const Toast = Swal.mixin({
     toast: true,
