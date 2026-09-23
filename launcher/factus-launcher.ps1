@@ -16,10 +16,11 @@ $ErrorActionPreference = 'Stop'
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configPath = Join-Path $base 'config.json'
 
-$config = @{ port = 8000; phpPath = $null; appPath = $null; browser = 'auto'; postgresPort = 5432 }
+$config = @{ port = 8000; host = '0.0.0.0'; phpPath = $null; appPath = $null; browser = 'auto'; postgresPort = 5432 }
 if (Test-Path $configPath) {
     $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
     if ($cfg.port)         { $config.port         = [int]$cfg.port }
+    if ($cfg.host)         { $config.host         = [string]$cfg.host }
     if ($cfg.phpPath)      { $config.phpPath      = [string]$cfg.phpPath }
     if ($cfg.appPath)      { $config.appPath      = [string]$cfg.appPath }
     if ($cfg.browser)      { $config.browser      = [string]$cfg.browser }
@@ -29,7 +30,18 @@ if (Test-Path $configPath) {
 $port = $config.port
 $appDir = if ($config.appPath -and (Test-Path $config.appPath)) { $config.appPath } else { Join-Path $base '..' }
 $appDir = (Resolve-Path $appDir).Path
-$baseUrl = "http://127.0.0.1:$port"
+
+# Host al que se enlaza el servidor (`--host=`). '0.0.0.0' / '::' / vacio /
+# '127.0.0.1' son locales de la maquina: la ventana y el watchdog usan
+# 127.0.0.1. Una IP concreta de la LAN usa esa IP para todo.
+$hostServe = $config.host
+if (-not $hostServe) { $hostServe = '127.0.0.1' }
+$destino = if ($hostServe -eq '0.0.0.0' -or $hostServe -eq '::' -or $hostServe -eq '127.0.0.1') {
+    '127.0.0.1'
+} else {
+    $hostServe
+}
+$baseUrl = "http://${destino}:$port"
 
 $stateDir = Join-Path $env:LOCALAPPDATA 'FACTUS'
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
@@ -46,10 +58,10 @@ function Mensaje([string]$texto, [string]$tipo = 'Information') {
     [System.Windows.Forms.MessageBox]::Show($texto, 'FACTUS', 'OK', $tipo) | Out-Null
 }
 
-function Test-Puerto([int]$p) {
+function Test-Puerto([int]$p, [string]$hostName = '127.0.0.1') {
     $cliente = New-Object System.Net.Sockets.TcpClient
     try {
-        $cliente.Connect('127.0.0.1', $p)
+        $cliente.Connect($hostName, $p)
         return $true
     } catch {
         return $false
@@ -125,7 +137,7 @@ function Iniciar-Servidor() {
     $php = Localizar-Php
     if (-not $php) { throw 'No se encontro PHP. Instala PHP 8.2+ y vuelve a abrir FACTUS.' }
 
-    $proc = Start-Process -FilePath $php -ArgumentList @('artisan', 'serve', '--host=127.0.0.1', "--port=$port") -WorkingDirectory $appDir -WindowStyle Hidden -PassThru
+    $proc = Start-Process -FilePath $php -ArgumentList @('artisan', 'serve', "--host=$hostServe", "--port=$port") -WorkingDirectory $appDir -WindowStyle Hidden -PassThru
     Set-Content -Path $pidFile -Value $proc.Id
 
     $listo = $false
@@ -133,7 +145,7 @@ function Iniciar-Servidor() {
         Start-Sleep -Milliseconds 500
         $proc.Refresh()
         if ($proc.HasExited) { break }
-        if (Test-Puerto $port) { $listo = $true; break }
+        if (Test-Puerto $port $destino) { $listo = $true; break }
     }
     if (-not $listo) {
         Matar-Proc $proc.Id
@@ -155,7 +167,7 @@ try {
     if (Test-Path $pidFile) {
         $phpAnterior = [int]((Get-Content $pidFile -Raw).Trim())
     }
-    $puertoActivo = Test-Puerto $port
+    $puertoActivo = Test-Puerto $port $destino
 
     if ($phpAnterior -and $phpAnterior -gt 0) {
         $procAnterior = Get-Process -Id $phpAnterior -ErrorAction SilentlyContinue
@@ -204,7 +216,7 @@ try {
         }
 
         # Watchdog del servidor: si PHP murio con la ventana abierta, reiniciarlo.
-        if (-not (Test-Puerto $port)) {
+        if (-not (Test-Puerto $port $destino)) {
             $reiniciado = $false
             for ($intento = 1; $intento -le 3; $intento++) {
                 if ($phpProc) {

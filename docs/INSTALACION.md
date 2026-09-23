@@ -211,15 +211,25 @@ Editar `C:\Factus\launcher\config.json`:
 ```json
 {
     "port": 8000,
+    "host": "0.0.0.0",
     "phpPath": "C:\\php\\php.exe",
     "appPath": "C:\\Factus",
     "browser": "auto"
 }
 ```
 
+- `port`: puerto del servidor (por defecto `8000`).
+- `host`: interfaz de escucha. `0.0.0.0` (defecto) permite usar el sistema **desde otras PCs de la red**
+  por `http://IP_DEL_SERVIDOR:8000`; `127.0.0.1` o vacío lo deja local.
 - `phpPath`: ruta al PHP del cliente (o `null` si está en el PATH).
 - `appPath`: carpeta raíz del proyecto (contiene `artisan`).
 - `browser`: `auto` (Edge → Chrome → Brave), `edge`, `chrome` o `brave`.
+
+**Firewall (una sola vez, como Administrador) si se usará desde más de una PC:**
+
+```powershell
+netsh advfirewall firewall add rule name="FACTUS 8000" dir=in action=allow protocol=TCP localport=8000
+```
 
 ### 5.6 Acceso directo en el escritorio
 

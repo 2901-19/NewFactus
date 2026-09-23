@@ -69,13 +69,8 @@ class PrinterService
     public static function itemsDesdeFactura(Factura $factura): array
     {
         return $factura->items->map(function ($item) {
-            $nombre = $item->producto->nombre ?? 'Producto';
-            if ($item->presentacion_nombre) {
-                $nombre .= ' ('.$item->presentacion_nombre.')';
-            }
-
             return [
-                'nombre' => $nombre,
+                'nombre' => $item->producto->nombre ?? 'Producto',
                 'precio_unitario' => (float) $item->precio_unitario_bs,
                 'cantidad' => $item->cantidad,
                 'total' => (float) $item->subtotal,
@@ -197,7 +192,7 @@ class PrinterService
         try {
             $producto = $this->ascii($datos['producto'] ?? '');
             $presentacion = $this->ascii($datos['presentacion'] ?? '');
-            $precioTexto = 'Bs '.Moneda::n($datos['precio_bs'] ?? 0);
+            $numero = Moneda::n($datos['precio_bs'] ?? 0);
 
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
             $this->printer->setEmphasis(true);
@@ -213,10 +208,12 @@ class PrinterService
             }
             $this->printer->feed();
 
-            $tam = max(1, min(4, (int) floor(self::ANCHO / strlen($precioTexto))));
+            $this->printer->setTextSize(2, 2);
+            $this->printer->text('Bs'."\n");
+            $tam = max(2, min(8, (int) floor(self::ANCHO / strlen($numero))));
             $this->printer->setEmphasis(true);
             $this->printer->setTextSize($tam, $tam);
-            $this->printer->text($precioTexto."\n");
+            $this->printer->text($numero."\n");
             $this->printer->setEmphasis(false);
             $this->printer->setTextSize(1, 1);
 
@@ -281,22 +278,23 @@ class PrinterService
     /**
      * Fila de 4 columnas con ancho dinámico por fila: la descripción
      * cede celdas para que los números (formato español 1.234,56) entren
-     * completos y queden alineados a la derecha. La descripción se
-     * envuelve por palabras sin desbordar las 48 celdas del papel.
+     * completos y queden alineados a la derecha, con un espacio entre
+     * precio unitario y precio total. La descripción se envuelve por
+     * palabras sin desbordar las 48 celdas del papel.
      */
     private function filaItems(string $cant, string $descripcion, string $precioU, string $precioT): string
     {
-        $anchoCant = 5;
+        $anchoCant = 4;
         $colCant = str_pad($cant, $anchoCant);
         $anchoPrecU = strlen($precioU);
         $anchoPrecT = strlen($precioT);
-        $anchoDesc = max(12, self::ANCHO - $anchoCant - $anchoPrecU - $anchoPrecT);
+        $anchoDesc = max(12, self::ANCHO - $anchoCant - $anchoPrecU - $anchoPrecT - 1);
 
         $lineas = $this->envolver($this->ascii($descripcion), $anchoDesc);
         $primera = array_shift($lineas) ?? '';
         $linea = $colCant.str_pad($primera, $anchoDesc)
             .str_pad($precioU, $anchoPrecU, STR_PAD_LEFT)
-            .str_pad($precioT, $anchoPrecT, STR_PAD_LEFT);
+            .' '.str_pad($precioT, $anchoPrecT, STR_PAD_LEFT);
 
         foreach ($lineas as $continuacion) {
             $linea .= "\n".str_pad('', $anchoCant).$continuacion;

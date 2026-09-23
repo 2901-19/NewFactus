@@ -21,7 +21,7 @@ Doble moneda integrada de forma nativa: el precio en Bs de cada producto sale de
 
 ## Operating Context
 
-- **Despliegue on-premises en Windows**: el sistema corre en la PC de mostrador del cliente (PHP + PostgreSQL locales, abierto por un lanzador de escritorio que arranca `php artisan serve` en `127.0.0.1:8000` y abre el navegador en modo app).
+- **Despliegue on-premises en Windows**: el sistema corre en la PC de mostrador del cliente (PHP + PostgreSQL locales, abierto por un lanzador de escritorio que arranca `php artisan serve` en `0.0.0.0:8000` y abre el navegador en modo app; también accesible desde otras PCs de la red por la IP del servidor).
 - **Un solo punto de venta por local.** No hay requisito de varias cajas ni de multi-tienda.
 - **Impresora térmica** conectada por red (puerto 9100) o compartida en Windows; recibo de venta, ticket de crédito y precio labels.
 - **Pesaje por kg**: productos pesables (rebanadas, granel) con unidad y cantidad por peso.

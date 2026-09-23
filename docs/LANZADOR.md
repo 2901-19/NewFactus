@@ -12,8 +12,10 @@ en una consola PowerShell oculta. El script:
 
 1. **Auto-recuperación**: si una instancia anterior quedó huérfana (cierre forzado), la limpia para
    que el puerto nunca quede bloqueado. Si el sistema ya está abierto, solo enfoca la ventana y sale.
-2. **Levanta el servidor**: `php artisan serve --host=127.0.0.1 --port=8000` con el PHP instalado en
-   la PC (`config.json.phpPath` → `PATH` → `C:\php\php.exe` → `%ProgramFiles%\php\php.exe`).
+2. **Levanta el servidor**: `php artisan serve --host=0.0.0.0 --port=8000` con el PHP instalado en
+   la PC (`config.json.phpPath` → `PATH` → `C:\php\php.exe` → `%ProgramFiles%\php\php.exe`). Por defecto
+   escucha en **todas las interfaces** (`config.json.host`), así el sistema se puede usar desde otras
+   PCs de la red por su IP.
 3. **Abre la ventana**: localiza el navegador (Edge → Chrome → Brave, o el que indique
    `config.json.browser`) y abre `http://127.0.0.1:8000/?_lanzador=<token>` con
    `--app` + `--user-data-dir` dedicado, para que la ventana viva en su propio proceso y sea vigilable.
@@ -27,7 +29,7 @@ en una consola PowerShell oculta. El script:
 |---|---|
 | `launcher/FACTUS.vbs` | Archivo de doble clic: ejecuta el PowerShell oculto |
 | `launcher/factus-launcher.ps1` | Toda la lógica del lanzador |
-| `launcher/config.json` | `port`, `phpPath`, `appPath`, `browser` |
+| `launcher/config.json` | `port`, `host`, `phpPath`, `appPath`, `browser`, `postgresPort` |
 
 El estado se guarda en `%LOCALAPPDATA%\FACTUS\` (`php.pid`, `token.txt`, `edge-profile`).
 
@@ -49,17 +51,34 @@ El token `?_lanzador` se vincula con la sesión del usuario mediante la tabla `l
 ```json
 {
     "port": 8000,
+    "host": "0.0.0.0",
     "phpPath": null,
     "appPath": null,
-    "browser": "auto"
+    "browser": "auto",
+    "postgresPort": 5432
 }
 ```
 
 - `port`: puerto del servidor (por defecto `8000`).
+- `host`: interfaz de escucha del servidor. `0.0.0.0` (defecto) = acepta conexiones de **la red** para
+  usar el sistema desde otras PCs (`http://IP_DEL_SERVIDOR:8000`) y de la propia máquina. `127.0.0.1` o
+  vacío = solo la PC local. Una IP concreta de la LAN = solo esa interfaz.
 - `phpPath`: ruta al `php.exe` (si es `null` se busca en `PATH`, `C:\php\php.exe`,
   `%ProgramFiles%\php\php.exe`).
 - `appPath`: ruta al proyecto Laravel (por defecto, la carpeta padre de `launcher/`).
 - `browser`: `auto` (Edge → Chrome → Brave), `edge`, `chrome` o `brave`.
+- `postgresPort`: puerto TCP de PostgreSQL para el chequeo previo (`<= 0` lo desactiva).
+
+### Acceso desde otra PC de la red
+
+1. En la PC servidor, permitir el puerto en Windows Firewall (una sola vez, como Administrador):
+   ```powershell
+   netsh advfirewall firewall add rule name="FACTUS 8000" dir=in action=allow protocol=TCP localport=8000
+   ```
+   (Si no se permite, Windows pide el diálogo de firewall en el primer arranque con `host=0.0.0.0`.)
+2. Desde la otra PC abrir `http://IP_DEL_SERVIDOR:8000` (averiguar la IP con `ipconfig` en el servidor).
+3. La última version de la app se sirve desde el servidor; cada PC usa su propia sesión y la impresora
+   térmica se configura en la máquina que la tiene conectada.
 
 ## Instalación en la PC del cliente
 

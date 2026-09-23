@@ -83,6 +83,7 @@
 }
 
 html {
+    font-size: 112.5%;
     font-variant-numeric: tabular-nums lining-nums;
     text-rendering: optimizeLegibility;
 }
@@ -253,48 +254,48 @@ body {
     opacity: 1;
 }
 
-.sidebar .nav-link {
+.sidebar .nav-pills .nav-link {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     padding: 0.5rem 0.65rem;
     border: 1px solid transparent;
     border-radius: var(--radio-hoja);
-    color: rgba(238, 240, 243, 0.8);
-    font-size: 0.88rem;
+    color: rgba(245, 247, 249, 0.96);
+    font-size: 0.92rem;
     text-decoration: none;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
-.sidebar .nav-link i {
+.sidebar .nav-pills .nav-link i {
     font-size: 1rem;
     width: 1.1rem;
     text-align: center;
-    color: rgba(238, 240, 243, 0.62);
+    color: rgba(245, 247, 249, 0.85);
     transition: color 0.12s ease;
 }
 
-.sidebar .nav-link:hover {
+.sidebar .nav-pills .nav-link:hover {
     color: #fff;
     background: rgba(255, 255, 255, 0.06);
 }
 
-.sidebar .nav-link:hover i {
+.sidebar .nav-pills .nav-link:hover i {
     color: rgba(255, 255, 255, 0.85);
 }
 
-.sidebar .nav-link.active {
+.sidebar .nav-pills .nav-link.active {
     color: #fff;
     background: rgba(255, 255, 255, 0.10);
     border-color: rgba(255, 255, 255, 0.14);
     font-weight: 600;
 }
 
-.sidebar .nav-link.active i {
+.sidebar .nav-pills .nav-link.active i {
     color: #fff;
 }
 
-.sidebar .nav-link.active::before {
+.sidebar .nav-pills .nav-link.active::before {
     content: '';
     width: 3px;
     align-self: stretch;
@@ -582,7 +583,7 @@ main.main-contenido {
     --bs-table-border-color: var(--agua);
     --bs-table-striped-color: var(--tinta);
     --bs-table-hover-color: var(--tinta);
-    font-size: 0.87rem;
+    font-size: 1rem;
     margin-bottom: 0;
 }
 
@@ -590,7 +591,7 @@ main.main-contenido {
     background: var(--tinta);
     color: #eef0f3;
     font-family: var(--font-mono);
-    font-size: 0.76rem;
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -602,7 +603,7 @@ main.main-contenido {
 
 .table tbody td {
     border-bottom: var(--borde-hoja);
-    padding: 0.55rem 0.65rem;
+    padding: 0.6rem 0.7rem;
     vertical-align: middle;
 }
 
@@ -643,7 +644,7 @@ main.main-contenido {
 }
 
 .table-sm {
-    font-size: 0.82rem;
+    font-size: 0.92rem;
 }
 
 .table .num {
@@ -1080,7 +1081,7 @@ main.main-contenido {
 .dataTables_wrapper .dataTables_filter,
 .dataTables_wrapper .dataTables_info {
     color: var(--tinta-3) !important;
-    font-size: 0.83rem;
+    font-size: 0.9rem;
 }
 .dataTables_wrapper .dataTables_length select {
     border: var(--borde-fuerte);

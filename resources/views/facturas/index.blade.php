@@ -42,7 +42,7 @@
                     <button class="btn btn-sm btn-info btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}">
                         <i class="bi bi-eye"></i>
                     </button>
-                    @if ($f->estado !== 'anulada')
+                    @if ($f->estado !== 'anulada' && auth()->user()->hasPermiso('anular-facturas'))
                         <button class="btn btn-sm btn-danger btn-anular" data-url="{{ route('facturas.anular', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
                             <i class="bi bi-x-circle"></i>
                         </button>
