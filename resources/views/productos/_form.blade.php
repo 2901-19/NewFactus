@@ -4,6 +4,8 @@
     $costoUsdInicial = old('costo_usd', $producto?->costo_usd ?? 0);
     $unidadMedidaInicial = old('unidad_medida', $producto?->unidad_medida ?? 'unidad');
     $stockInicial = old('stock_actual', $producto?->stock_actual ?? 0);
+    $uniLoteInicial = old('unidades_lote', $producto?->unidades_lote ?? '');
+    $precioLoteInicial = old('precio_lote', $producto?->precio_lote ?? '');
     $tieneImagen = ! empty($producto?->imagen);
 @endphp
 <script>
@@ -70,7 +72,9 @@
     window.__productoForm.mapaTasas,
     window.__productoForm.tasaPorDefecto,
     window.__productoForm.unidadMedida,
-    {{ $stockInicial }}
+    {{ $stockInicial }},
+    '{{ $uniLoteInicial }}',
+    '{{ $precioLoteInicial }}'
 )">
 <div class="card mb-4">
     <div class="card-header"><i class="bi bi-cash-coin me-1"></i> Costo e Inventario</div>
@@ -87,12 +91,13 @@
                     </div>
                     <div class="mt-1">
                         <input type="number" step="0.01" min="0" name="costo_usd" x-model.number="costoUsd" x-show="costoModo === 'unidad'" class="form-control @error('costo_usd') is-invalid @enderror" value="{{ old('costo_usd', $producto?->costo_usd) }}">
+                        <input type="hidden" name="costo_modo" x-model="costoModo">
                         <div class="row g-2" x-show="medida === 'unidad' && costoModo === 'lote'">
                             <div class="col-6">
-                                <input type="number" step="1" min="1" x-model.number="uniLote" @input="sincronizarLote" class="form-control" placeholder="Uni. Lote">
+                                <input type="number" step="1" min="1" name="unidades_lote" x-model.number="uniLote" @input="sincronizarLote" class="form-control" placeholder="Uni. Lote">
                             </div>
                             <div class="col-6">
-                                <input type="number" step="0.01" min="0" x-model.number="precioLote" @input="sincronizarLote" class="form-control" placeholder="Precio Lote (USD)">
+                                <input type="number" step="0.01" min="0" name="precio_lote" x-model.number="precioLote" @input="sincronizarLote" class="form-control" placeholder="Precio Lote (USD)">
                             </div>
                         </div>
                     </div>
@@ -238,14 +243,14 @@
 
 @push('scripts')
 <script>
-    function productoForm(costoUsd, presentaciones, tasas, tasaPorDefecto, medida, stockActual) {
+    function productoForm(costoUsd, presentaciones, tasas, tasaPorDefecto, medida, stockActual, uniLote, precioLote) {
         const filas = (presentaciones && presentaciones.length ? presentaciones : [{ nombre: 'Unidad', factor_conversion: 1, margen: 0, activa: true }])
             .map(p => ({ fuente_tasa: tasaPorDefecto, ...p }));
         return {
             costoUsd: parseFloat(costoUsd) || 0,
-            costoModo: 'unidad',
-            uniLote: '',
-            precioLote: '',
+            costoModo: medida === 'kg' ? 'unidad' : 'lote',
+            uniLote: uniLote ?? '',
+            precioLote: precioLote ?? '',
             tasas: tasas || {},
             tasaPorDefecto: tasaPorDefecto || (Object.keys(tasas || {})[0] || ''),
             medida: medida || 'unidad',
@@ -259,7 +264,7 @@
                 this.costoModo = modo;
             },
             sincronizarLote() {
-                this.costoUsd = this.uniLote > 0 ? (parseFloat(this.precioLote) || 0) / this.uniLote : 0;
+                this.costoUsd = this.uniLote > 0 ? this.redon2((parseFloat(this.precioLote) || 0) / this.uniLote) : 0;
             },
             agregar() {
                 this.presentaciones.push({ nombre: '', factor_conversion: 1, margen: 0, fuente_tasa: this.tasaPorDefecto, activa: true });

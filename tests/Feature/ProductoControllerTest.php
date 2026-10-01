@@ -182,6 +182,111 @@ class ProductoControllerTest extends TestCase
         $response->assertSessionHasErrors(['nombre', 'costo_usd', 'unidad_medida', 'presentaciones', 'estado']);
     }
 
+    public function test_store_modo_lote_calcula_costos_y_guarda_lote()
+    {
+        $categoria = Categoria::factory()->create();
+        $this->actingAs($this->user);
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Pepsi 2L',
+            'categoria_id' => $categoria->id,
+            'costo_usd' => 0,
+            'costo_modo' => 'lote',
+            'unidades_lote' => 7,
+            'precio_lote' => 3,
+            'unidad_medida' => 'unidad',
+            'stock_actual' => 0,
+            'impuesto_id' => null,
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', [
+            'nombre' => 'Pepsi 2L',
+            'costo_usd' => 0.43,
+            'unidades_lote' => 7,
+            'precio_lote' => 3,
+        ]);
+        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'precio_usd' => 0.54, 'fuente_tasa' => 'promedio']);
+    }
+
+    public function test_store_modo_unidad_guarda_costo_sin_lote()
+    {
+        $categoria = Categoria::factory()->create();
+        $this->actingAs($this->user);
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Directo',
+            'categoria_id' => $categoria->id,
+            'costo_usd' => 10.00,
+            'costo_modo' => 'unidad',
+            'unidad_medida' => 'unidad',
+            'stock_actual' => 0,
+            'impuesto_id' => null,
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', ['nombre' => 'Directo', 'costo_usd' => 10.00, 'unidades_lote' => null, 'precio_lote' => null]);
+    }
+
+    public function test_update_de_lote_a_unidad_limpia_campos_lote()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Loteado', 'unidades_lote' => 7, 'precio_lote' => 3]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 0.43,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->user);
+
+        $response = $this->put("/productos/{$producto->id}", [
+            'nombre' => $producto->nombre,
+            'categoria_id' => $producto->categoria_id,
+            'costo_usd' => 9.99,
+            'costo_modo' => 'unidad',
+            'unidad_medida' => 'unidad',
+            'stock_actual' => $producto->stock_actual,
+            'impuesto_id' => $producto->impuesto_id,
+            'estado' => $producto->estado,
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $producto->refresh();
+        $this->assertNull($producto->unidades_lote);
+        $this->assertNull($producto->precio_lote);
+        $this->assertEquals(9.99, $producto->costo_usd);
+    }
+
+    public function test_edit_muestra_formulario_con_lote_precargado()
+    {
+        $producto = Producto::factory()->create(['unidades_lote' => 7, 'precio_lote' => 3]);
+        $this->actingAs($this->user);
+
+        $response = $this->get("/productos/{$producto->id}/edit");
+
+        $response->assertStatus(200);
+        $response->assertSee('name="unidades_lote"', false);
+        $response->assertSee('name="precio_lote"', false);
+        $response->assertSee('name="costo_modo"', false);
+        $response->assertSee("'7'", false);
+        $response->assertSee("'3'", false);
+    }
+
     public function test_edit_muestra_formulario()
     {
         $producto = Producto::factory()->create();

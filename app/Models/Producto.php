@@ -16,6 +16,8 @@ class Producto extends Model
         'descripcion',
         'imagen',
         'costo_usd',
+        'unidades_lote',
+        'precio_lote',
         'stock_actual',
         'unidad_medida',
         'impuesto_id',
@@ -53,6 +55,7 @@ class Producto extends Model
     {
         return [
             'costo_usd' => 'float',
+            'precio_lote' => 'float',
             'stock_actual' => 'float',
         ];
     }

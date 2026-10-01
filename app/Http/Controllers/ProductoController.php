@@ -158,6 +158,7 @@ class ProductoController extends Controller
 
         $data['unidad_medida'] = $request->input('unidad_medida');
         $data['stock_actual'] = $this->esPesable($data['unidad_medida']) ? 0 : (float) ($data['stock_actual'] ?? 0);
+        $data = $this->aplicarLote($request, $data);
 
         $presentaciones = $this->prepararPresentaciones($request, $data['costo_usd'], $request->input('presentaciones', []), $data['unidad_medida']);
 
@@ -214,6 +215,7 @@ class ProductoController extends Controller
         } else {
             $data['stock_actual'] = (float) ($data['stock_actual'] ?? $producto->stock_actual ?? 0);
         }
+        $data = $this->aplicarLote($request, $data);
 
         $producto->update(collect($data)->except('presentaciones')->toArray());
         $this->sincronizarPresentaciones($request, $producto, $data['costo_usd'], $request->input('presentaciones', []), $data['unidad_medida']);
@@ -243,6 +245,9 @@ class ProductoController extends Controller
             'categoria_id' => 'nullable|exists:categorias,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'costo_usd' => 'required|numeric|min:0',
+            'costo_modo' => 'nullable|in:unidad,lote',
+            'unidades_lote' => 'nullable|integer|min:1',
+            'precio_lote' => 'nullable|numeric|min:0',
             'unidad_medida' => 'required|in:unidad,kg',
             'stock_actual' => 'nullable|numeric|min:0',
             'presentaciones' => 'required|array|min:1',
@@ -259,6 +264,31 @@ class ProductoController extends Controller
     private function esPesable(string $unidadMedida): bool
     {
         return $unidadMedida === 'kg';
+    }
+
+    private function aplicarLote(Request $request, array $data): array
+    {
+        $esLote = $request->input('costo_modo') === 'lote' && ! $this->esPesable($data['unidad_medida'] ?? 'unidad');
+
+        if ($esLote) {
+            $unidades = (int) ($request->input('unidades_lote') ?? 0);
+            $precioLote = (float) ($request->input('precio_lote') ?? 0);
+
+            if ($unidades > 0) {
+                $data['costo_usd'] = round($precioLote / $unidades, 2);
+                $data['unidades_lote'] = $unidades;
+                $data['precio_lote'] = $precioLote;
+            } else {
+                $data['costo_usd'] = 0;
+                $data['unidades_lote'] = null;
+                $data['precio_lote'] = null;
+            }
+        } else {
+            $data['unidades_lote'] = null;
+            $data['precio_lote'] = null;
+        }
+
+        return $data;
     }
 
     private function prepararPresentaciones(Request $request, float $costoUsd, array $presentaciones, string $unidadMedida): array
