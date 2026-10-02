@@ -14,6 +14,7 @@ use App\Services\ImpuestoService;
 use App\Services\PrinterService;
 use App\Services\StockService;
 use App\Services\TasaCambioService;
+use App\Support\BusquedaProductos;
 use App\Support\Moneda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,12 +81,11 @@ class FacturaController extends Controller
     public function posProductos(Request $request)
     {
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')
-            ->with(['presentaciones', 'impuesto'])
-            ->when($request->filled('search.value'), function ($q) use ($request) {
-                $q->whereRaw('LOWER(nombre) LIKE ?', ['%'.mb_strtolower($request->input('search.value')).'%']);
-            })
-            ->orderBy('nombre')
-            ->get();
+            ->with(['presentaciones', 'impuesto']);
+
+        BusquedaProductos::aplicar($productos, (string) $request->input('search.value'), false);
+
+        $productos = $productos->orderBy('nombre')->get();
 
         $tasas = TasaCambio::ultimasPorTipo();
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');

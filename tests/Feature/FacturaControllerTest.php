@@ -166,6 +166,34 @@ class FacturaControllerTest extends TestCase
         $this->assertContains($this->presentacionMayor->id, $ids);
     }
 
+    public function test_pos_busca_por_combinacion_de_palabras_en_cualquier_orden()
+    {
+        $productoExtra = Producto::factory()->create([
+            'nombre' => 'Harina PAN 1kg',
+            'costo_usd' => 2.00,
+            'stock_actual' => 10,
+            'unidad_medida' => 'unidad',
+            'estado' => 'disponible',
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $productoExtra->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 2.50,
+            'fuente_tasa' => 'promedio',
+            'activa' => true,
+        ]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->getJson('/pos/productos?start=0&length=15&draw=1&search[value]=pan%20harina');
+
+        $response->assertStatus(200);
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Harina PAN 1kg', $data[0]['nombre']);
+    }
+
     public function test_pos_marca_producto_sin_tasa_configurada()
     {
         $productoSinTasa = Producto::factory()->create([

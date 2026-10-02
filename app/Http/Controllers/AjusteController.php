@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Services\PrecioService;
+use App\Support\BusquedaProductos;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -25,13 +26,7 @@ class AjusteController extends Controller
 
         $query = Producto::whereNull('deleted_at')->with(['categoria', 'presentaciones']);
 
-        $search = trim((string) $request->input('search.value'));
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(nombre) LIKE ?', ['%'.mb_strtolower($search).'%'])
-                    ->orWhereHas('categoria', fn ($c) => $c->whereRaw('LOWER(categorias.nombre) LIKE ?', ['%'.mb_strtolower($search).'%']));
-            });
-        }
+        BusquedaProductos::aplicar($query, (string) $request->input('search.value'), true);
 
         $total = (clone $query)->count();
 

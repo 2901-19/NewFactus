@@ -69,6 +69,45 @@ class ProductoControllerTest extends TestCase
         $this->assertEquals('Harina Pan', $data[0]['nombre']);
     }
 
+    public function test_data_busca_combinacion_de_palabras_en_cualquier_orden()
+    {
+        Producto::factory()->create(['nombre' => 'Harina de Maíz 500g']);
+        Producto::factory()->create(['nombre' => 'Harina PAN 1kg']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=harina%20pan');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Harina PAN 1kg', $data[0]['nombre']);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=pan%20harina');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Harina PAN 1kg', $data[0]['nombre']);
+    }
+
+    public function test_data_busca_por_nombre_de_presentacion()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Agua Mineral']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Manantial 5L',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 1.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=manantial');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Agua Mineral', $data[0]['nombre']);
+    }
+
     public function test_data_ordena_por_categoria()
     {
         $z = Categoria::factory()->create(['nombre' => 'Zeta']);
