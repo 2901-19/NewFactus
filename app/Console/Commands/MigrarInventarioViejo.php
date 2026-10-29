@@ -98,6 +98,10 @@ class MigrarInventarioViejo extends Command
                     continue;
                 }
 
+                $costoUsd = $this->calcularCosto($base['precie_usd'], $base['porcentage']);
+                $unidadesLote = (int) $base['units_package'];
+                $precioLote = (float) $base['precie_package'];
+
                 $producto = Producto::create([
                     'nombre' => $nombreProducto,
                     'categoria_id' => null,
@@ -105,32 +109,37 @@ class MigrarInventarioViejo extends Command
                     'imagen' => null,
                     'unidad_medida' => 'unidad',
                     'impuesto_id' => null,
-                    'costo_usd' => $this->calcularCosto($base['precie_usd'], $base['porcentage']),
+                    'costo_usd' => $costoUsd,
+                    'unidades_lote' => $unidadesLote > 0 ? $unidadesLote : null,
+                    'precio_lote' => $precioLote > 0 ? $precioLote : null,
                     'estado' => $base['status'] === 'Disponible' ? 'disponible' : 'no_disponible',
                 ]);
 
                 // Presentación Unidad (solo si hay registro normal)
                 if ($normal) {
+                    $margen = round((float) $base['porcentage'], 2);
                     ProductoPresentacion::create([
                         'producto_id' => $producto->id,
                         'nombre' => 'Unidad',
                         'factor_conversion' => 1,
-                        'margen' => round((float) $base['porcentage'], 2),
+                        'margen' => $margen,
                         'fuente_tasa' => $this->mapearFuenteTasa($base['daily_dollar']),
-                        'precio_usd' => (float) $base['precie_unit'],
+                        'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
                         'activa' => true,
                     ]);
                 }
 
                 // Presentación Mayor (si existe)
                 if ($mayor) {
+                    $margen = round((float) $mayor['porcentage'], 2);
+                    $factor = (int) $mayor['units_package'] ?: 1;
                     ProductoPresentacion::create([
                         'producto_id' => $producto->id,
                         'nombre' => 'Mayor',
-                        'factor_conversion' => (int) $mayor['units_package'] ?: 1,
-                        'margen' => round((float) $mayor['porcentage'], 2),
+                        'factor_conversion' => $factor,
+                        'margen' => $margen,
                         'fuente_tasa' => $this->mapearFuenteTasa($mayor['daily_dollar']),
-                        'precio_usd' => (float) $mayor['precie_unit'],
+                        'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, $factor),
                         'activa' => true,
                     ]);
 
@@ -397,19 +406,24 @@ class MigrarInventarioViejo extends Command
         $precio = (float) $precieUsd;
         $margen = (float) $porcentage;
 
-        if ($precio <= 0 || $margen <= 0) {
+        if ($precio <= 0) {
             return 0;
         }
 
-        return max(0, round($precio * (1 - $margen / 100), 2));
+        if ($margen <= 0) {
+            return round($precio, 2);
+        }
+
+        return max(0, round($precio / (1 + $margen / 100), 2));
     }
 
     private function mapearFuenteTasa(string $dailyDollar): string
     {
+        // El viejo guarda 0 = "No rentable" (promedio), 1 = "Rentable" (usdt), 2 = BCV.
         return match ($dailyDollar) {
-            '0' => 'bcv',
+            '0' => 'promedio',
             '1' => 'usdt',
-            default => 'promedio',
+            default => 'bcv',
         };
     }
 }

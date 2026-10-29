@@ -43,6 +43,9 @@ class HerramientasController extends Controller
             $data['precios'] = Producto::with(['presentaciones', 'impuesto'])->get()->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
+                'unidades_lote' => $p->unidades_lote,
+                'precio_lote' => $p->precio_lote,
+                'estado' => $p->estado,
                 'impuesto' => $p->impuesto?->nombre,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
@@ -153,7 +156,12 @@ class HerramientasController extends Controller
                                 'activa' => (bool) ($pr['activa'] ?? true),
                             ])->values()->all();
 
-                            $estadoImportado = collect($datosPresentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
+                            $estadoImportado = in_array($item['estado'] ?? null, ['disponible', 'no_disponible'], true)
+                                ? $item['estado']
+                                : (collect($datosPresentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible');
+
+                            // Lote opcional: solo se toca si viene en el archivo (backups viejos no lo traen).
+                            $loteImportado = $this->loteDesdeItem($item);
 
                             $impuestoId = $this->impuestoIdDesdeItem($item, $producto?->impuesto_id);
 
@@ -162,7 +170,7 @@ class HerramientasController extends Controller
                                     'costo_usd' => $costoUsd,
                                     'impuesto_id' => $impuestoId,
                                     'estado' => $estadoImportado,
-                                ]);
+                                ] + $loteImportado);
                                 $producto->presentaciones()->delete();
                                 $producto->presentaciones()->createMany($datosPresentaciones);
                             } else {
@@ -171,7 +179,7 @@ class HerramientasController extends Controller
                                     'costo_usd' => $costoUsd,
                                     'impuesto_id' => $impuestoId,
                                     'estado' => $estadoImportado,
-                                ]);
+                                ] + $loteImportado);
                                 $producto->presentaciones()->createMany($datosPresentaciones);
                             }
                             $contadores['precios']++;
@@ -656,6 +664,27 @@ class HerramientasController extends Controller
         }
 
         return Impuesto::where('nombre', $nombre)->value('id') ?? $actual;
+    }
+
+    /**
+     * Lote como costo alternativo: solo devuelve claves si el archivo las trae,
+     * para no borrar el lote actual al reimportar un backup de formato viejo.
+     */
+    private function loteDesdeItem(array $item): array
+    {
+        $datos = [];
+
+        if (array_key_exists('unidades_lote', $item)) {
+            $unidades = (int) ($item['unidades_lote'] ?? 0);
+            $datos['unidades_lote'] = $unidades > 0 ? $unidades : null;
+        }
+
+        if (array_key_exists('precio_lote', $item)) {
+            $precio = (float) ($item['precio_lote'] ?? 0);
+            $datos['precio_lote'] = $precio > 0 ? $precio : null;
+        }
+
+        return $datos;
     }
 
     /**

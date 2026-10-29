@@ -53,14 +53,16 @@ class MigrarInventarioViejoTest extends TestCase
         $this->assertNull($pepsi->descripcion);
         $this->assertEquals('unidad', $pepsi->unidad_medida);
         $this->assertEquals(0, $pepsi->stock_actual);
-        $this->assertEqualsWithDelta(1.31, $pepsi->costo_usd, 0.01);
+        $this->assertEqualsWithDelta(1.33, $pepsi->costo_usd, 0.01);
+        $this->assertEquals(6, $pepsi->unidades_lote);
+        $this->assertEquals(8.01, $pepsi->precio_lote);
         $this->assertEquals(1, $pepsi->presentaciones()->count());
 
         $presentacion = $pepsi->presentaciones()->first();
         $this->assertEquals('Unidad', $presentacion->nombre);
         $this->assertEquals(13.0, $presentacion->margen);
-        $this->assertEquals('bcv', $presentacion->fuente_tasa);
-        $this->assertEquals(1.33, $presentacion->precio_usd);
+        $this->assertEquals('promedio', $presentacion->fuente_tasa);
+        $this->assertEquals(1.50, $presentacion->precio_usd);
         $this->assertEquals(1, $presentacion->factor_conversion);
     }
 
@@ -159,15 +161,15 @@ class MigrarInventarioViejoTest extends TestCase
 
         $presentacion = $producto->presentaciones()->first();
         $this->assertEquals('Mayor', $presentacion->nombre);
-        $this->assertEquals('promedio', $presentacion->fuente_tasa);
+        $this->assertEquals('bcv', $presentacion->fuente_tasa);
     }
 
     public function test_mapea_daily_dollar_a_fuente_tasa()
     {
         $archivo = $this->crearArchivoSql([
-            $this->filaSql(1, 'Cat A', 'Prod Bcv', 10, 6, 'Disponible', '', 0, 6.00, 1.00, 13, 0.20, 0, 1.20),
+            $this->filaSql(1, 'Cat A', 'Prod Bcv', 10, 6, 'Disponible', '', 0, 6.00, 1.00, 13, 0.20, 2, 1.20),
             $this->filaSql(2, 'Cat A', 'Prod Usdt', 10, 6, 'Disponible', '', 0, 6.00, 1.00, 13, 0.20, 1, 1.20),
-            $this->filaSql(3, 'Cat A', 'Prod Promedio', 10, 6, 'Disponible', '', 0, 6.00, 1.00, 13, 0.20, 2, 1.20),
+            $this->filaSql(3, 'Cat A', 'Prod Promedio', 10, 6, 'Disponible', '', 0, 6.00, 1.00, 13, 0.20, 0, 1.20),
         ]);
 
         $this->artisan('migrar:inventario-viejo', ['--archivo' => $archivo])
@@ -180,7 +182,7 @@ class MigrarInventarioViejoTest extends TestCase
 
     public function test_calcula_costo_usd_correctamente()
     {
-        // precie_usd=2.00, porcentage=25 → costo = 2.00 * 0.75 = 1.50
+        // precie_usd=2.00, porcentage=25 → costo = 2.00 / 1.25 = 1.60
         $archivo = $this->crearArchivoSql([
             $this->filaSql(1, 'Refresco', 'Pepsi 2L', 18, 6, 'Disponible', '', 0, 8.01, 1.33, 25, 0.17, 0, 2.00),
         ]);
@@ -188,7 +190,7 @@ class MigrarInventarioViejoTest extends TestCase
         $this->artisan('migrar:inventario-viejo', ['--archivo' => $archivo])
             ->assertExitCode(0);
 
-        $this->assertEquals(1.5, Producto::first()->costo_usd);
+        $this->assertEquals(1.6, Producto::first()->costo_usd);
     }
 
     public function test_costo_cero_sin_precie_usd()
@@ -309,7 +311,7 @@ class MigrarInventarioViejoTest extends TestCase
         $this->assertEquals(20, $mayor['factor_conversion']);
         $this->assertEquals(5, $mayor['margen']);
         $this->assertEquals(15.8, $mayor['precio_usd']);
-        $this->assertEquals('promedio', $mayor['fuente_tasa']);
+        $this->assertEquals('bcv', $mayor['fuente_tasa']);
     }
 
     public function test_export_json_con_presentaciones_editadas_persisten_precio_calculado()

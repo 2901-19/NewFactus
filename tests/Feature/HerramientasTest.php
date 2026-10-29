@@ -411,6 +411,73 @@ class HerramientasTest extends TestCase
         $this->assertDatabaseHas('productos', ['nombre' => 'Harina', 'estado' => 'no_disponible']);
     }
 
+    public function test_importar_precios_guarda_lote_y_estado()
+    {
+        $this->actingAs($this->admin);
+        $producto = Producto::factory()->create(['nombre' => 'Coamo 900ml', 'costo_usd' => 1.70, 'estado' => 'disponible']);
+
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Coamo 900ml',
+            'costo_usd' => 2.23,
+            'unidades_lote' => 20,
+            'precio_lote' => 44.50,
+            'estado' => 'no_disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 7, 'fuente_tasa' => 'usdt', 'activa' => true],
+            ],
+        ]]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $response = $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo]);
+
+        $response->assertSessionHas('success');
+        $producto->refresh();
+        $this->assertEquals(2.23, $producto->costo_usd);
+        $this->assertEquals(20, $producto->unidades_lote);
+        $this->assertEquals(44.50, $producto->precio_lote);
+        $this->assertEquals('no_disponible', $producto->estado);
+    }
+
+    public function test_importar_precios_sin_lote_conserva_el_guardado()
+    {
+        $this->actingAs($this->admin);
+        $producto = Producto::factory()->create(['nombre' => 'Coamo 900ml', 'unidades_lote' => 20, 'precio_lote' => 44.50]);
+
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Coamo 900ml',
+            'costo_usd' => 2.23,
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 7, 'fuente_tasa' => 'usdt', 'activa' => true],
+            ],
+        ]]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo]);
+
+        $producto->refresh();
+        $this->assertEquals(20, $producto->unidades_lote);
+        $this->assertEquals(44.50, $producto->precio_lote);
+    }
+
+    public function test_exportar_precios_incluye_lote_y_estado()
+    {
+        $this->actingAs($this->admin);
+        Producto::factory()->create([
+            'nombre' => 'Coamo 900ml',
+            'unidades_lote' => 20,
+            'precio_lote' => 44.50,
+            'estado' => 'no_disponible',
+        ]);
+
+        $response = $this->get('/herramientas/exportar?tipos[]=precios');
+        $data = json_decode($response->getContent(), true);
+        $precio = collect($data['precios'])->firstWhere('nombre', 'Coamo 900ml');
+
+        $this->assertSame(20, $precio['unidades_lote']);
+        $this->assertEquals(44.50, $precio['precio_lote']);
+        $this->assertSame('no_disponible', $precio['estado']);
+    }
+
     public function test_importar_productos_formato_antiguo_crea_presentaciones()
     {
         $this->actingAs($this->admin);

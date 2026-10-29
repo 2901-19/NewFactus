@@ -248,7 +248,7 @@
             .map(p => ({ fuente_tasa: tasaPorDefecto, ...p }));
         return {
             costoUsd: parseFloat(costoUsd) || 0,
-            costoModo: medida === 'kg' ? 'unidad' : 'lote',
+            costoModo: uniLote && medida !== 'kg' ? 'lote' : 'unidad',
             uniLote: uniLote ?? '',
             precioLote: precioLote ?? '',
             tasas: tasas || {},
