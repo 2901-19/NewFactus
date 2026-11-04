@@ -867,4 +867,191 @@ class FacturaControllerTest extends TestCase
         $this->assertEquals(248.00, (float) $factura->iva_bs);
         $this->assertEquals(1798.00, (float) $factura->total_bs);
     }
+
+    public function test_pos_busca_ignorando_acentos()
+    {
+        $productoExtra = Producto::factory()->create([
+            'nombre' => 'Azúcar Morena',
+            'costo_usd' => 1.00,
+            'stock_actual' => 10,
+            'unidad_medida' => 'unidad',
+            'estado' => 'disponible',
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $productoExtra->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 1.50,
+            'fuente_tasa' => 'promedio',
+            'activa' => true,
+        ]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->getJson('/pos/productos?start=0&length=15&draw=1&search[value]=azucar');
+
+        $response->assertStatus(200);
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Azúcar Morena', $data[0]['nombre']);
+    }
+
+    public function test_store_pago_movil_requiere_referencia_y_telefono()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'pago_movil',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['datos_pago.referencia', 'datos_pago.telefono']);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_store_transferencia_requiere_referencia()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'transferencia',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['datos_pago.referencia']);
+    }
+
+    public function test_store_pago_movil_guarda_datos_pago()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'pago_movil',
+            'estado' => 'contado',
+            'datos_pago' => ['referencia' => '123456', 'telefono' => '04141234567'],
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals(
+            ['referencia' => '123456', 'telefono' => '04141234567'],
+            $factura->datos_pago
+        );
+    }
+
+    public function test_store_transferencia_guarda_solo_referencia()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'transferencia',
+            'estado' => 'contado',
+            'datos_pago' => ['referencia' => '987654', 'telefono' => '04141234567'],
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals(['referencia' => '987654'], $factura->datos_pago);
+    }
+
+    public function test_pagar_credito_pago_movil_guarda_datos_pago()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'items' => [$this->crearItemData(['cantidad' => 2])],
+        ]);
+
+        $factura = Factura::first();
+
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito", [
+            'metodo_pago' => 'pago_movil',
+            'datos_pago' => ['referencia' => '555111', 'telefono' => '04241112233'],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $factura->refresh();
+        $this->assertEquals('cancelado', $factura->estado_credito);
+        $this->assertEquals(
+            ['referencia' => '555111', 'telefono' => '04241112233'],
+            $factura->datos_pago
+        );
+    }
+
+    public function test_pagar_credito_transferencia_requiere_referencia()
+    {
+        $factura = Factura::factory()->create([
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'estado_credito' => 'pendiente',
+        ]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'transferencia']);
+
+        $response->assertSessionHasErrors('datos_pago.referencia');
+
+        $factura->refresh();
+        $this->assertEquals('pendiente', $factura->estado_credito);
+    }
+
+    public function test_recibo_muestra_rif_y_cantidad_pesable_en_kg()
+    {
+        Configuracion::updateOrCreate(['clave' => 'rif'], ['valor' => 'J-12345678-9']);
+        Configuracion::olvidar('rif');
+        $this->actingAs($this->cajero);
+
+        $productoPesable = Producto::factory()->create([
+            'nombre' => 'Queso',
+            'costo_usd' => 4.00,
+            'stock_actual' => 0,
+            'unidad_medida' => 'kg',
+            'estado' => 'disponible',
+        ]);
+        $presentacionKg = ProductoPresentacion::factory()->create([
+            'producto_id' => $productoPesable->id,
+            'nombre' => 'Kilogramo',
+            'factor_conversion' => 1,
+            'margen' => 30,
+            'precio_usd' => 5.20,
+            'activa' => true,
+        ]);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [[
+                'producto_id' => $productoPesable->id,
+                'presentacion_id' => $presentacionKg->id,
+                'cantidad' => 0.8,
+            ]],
+        ])->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+
+        $response = $this->get("/facturas/{$factura->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('RIF J-12345678-9');
+        $response->assertSee('0,800 kg');
+    }
 }

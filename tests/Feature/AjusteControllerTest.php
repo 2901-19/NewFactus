@@ -80,6 +80,19 @@ class AjusteControllerTest extends TestCase
         $this->assertEquals('Harina Pan', $data[0]['nombre']);
     }
 
+    public function test_precios_data_ignora_acentos_en_la_busqueda()
+    {
+        Producto::factory()->create(['nombre' => 'Azúcar Morena']);
+        Producto::factory()->create(['nombre' => 'Harina Pan']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/ajustar-precios/data?draw=1&start=0&length=10&search[value]=azucar');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Azúcar Morena', $data[0]['nombre']);
+    }
+
     public function test_precios_data_busca_combinacion_de_palabras_en_cualquier_orden()
     {
         Producto::factory()->create(['nombre' => 'Harina de Maíz 500g']);

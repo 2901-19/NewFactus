@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('titulo', 'Punto de Venta')
 @section('contenido')
-@php $nombreNegocio = \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')); @endphp
+@php $nombreNegocio = \App\Models\Configuracion::obtener('nombre_negocio', config('app.name')); $rifNegocio = \App\Models\Configuracion::obtener('rif'); @endphp
 <div x-data="pos" class="row">
     <div class="col-md-7">
         <div class="card">
@@ -84,6 +84,17 @@
                         <option value="transferencia">Transferencia</option>
                         <option value="mixto">Mixto</option>
                     </select>
+                </div>
+                <div x-show="['pago_movil','transferencia'].includes(metodoPago) && tipoFactura !== 'credito'" class="mb-2 p-2 border rounded bg-light">
+                    <div class="small fw-bold mb-2"><i class="bi bi-bank"></i> Datos del pago</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" x-model="datosPago.referencia" class="form-control form-control-sm" placeholder="Referencia *">
+                        </div>
+                        <div class="col-6" x-show="metodoPago === 'pago_movil'">
+                            <input type="text" x-model="datosPago.telefono" class="form-control form-control-sm" placeholder="Teléfono *">
+                        </div>
+                    </div>
                 </div>
                 <div x-show="metodoPago === 'mixto' && tipoFactura !== 'credito'" class="mb-2 p-2 border rounded bg-light">
                     <div class="small fw-bold mb-2"><i class="bi bi-wallet2"></i> Pago Mixto</div>
@@ -181,6 +192,9 @@
                     <div class="recibo">
                         <div class="recibo-head">
                             <div class="recibo-brand">{{ $nombreNegocio }}</div>
+                            @if ($rifNegocio)
+                                <div class="small text-muted">RIF {{ $rifNegocio }}</div>
+                            @endif
                             <span class="recibo-titulo">FACTURA DE VENTA</span>
                         </div>
                         <div class="p-3">
@@ -196,7 +210,7 @@
                                 <tbody>
                                     <template x-for="(item, index) in carrito" :key="index">
                                         <tr>
-                                            <td class="cant" x-text="item.controla_inventario ? item.cantidad : '—'"></td>
+                                            <td class="cant" x-text="item.controla_inventario ? item.cantidad : fmtMoneda(item.cantidad, 3) + ' kg'"></td>
                                             <td class="desc">
                                                 <span x-text="item.nombre"></span>
                                                 <span class="text-muted small" x-show="presNombre(index)" x-text="'(' + presNombre(index) + ')'"></span>
@@ -240,6 +254,14 @@
                                 <div class="fila-total" x-show="tipoFactura !== 'credito' && metodoPago !== 'mixto'">
                                     <span>Pago</span>
                                     <span x-text="nombreMetodo(metodoPago)"></span>
+                                </div>
+                                <div class="fila-total" x-show="tipoFactura !== 'credito' && metodoPago !== 'mixto' && datosPago.referencia">
+                                    <span>Referencia</span>
+                                    <span x-text="datosPago.referencia"></span>
+                                </div>
+                                <div class="fila-total" x-show="tipoFactura !== 'credito' && metodoPago === 'pago_movil' && datosPago.telefono">
+                                    <span>Teléfono</span>
+                                    <span x-text="datosPago.telefono"></span>
                                 </div>
                                 <template x-if="tipoFactura !== 'credito' && metodoPago === 'mixto'">
                                     <div>
@@ -334,6 +356,7 @@ document.addEventListener('alpine:init', () => {
         tasaReferencia: '{{ $tasaReferenciaTipo }}',
         carrito: [],
         metodoPago: 'efectivo',
+        datosPago: { referencia: '', telefono: '' },
         tipoFactura: 'contado',
         clienteId: '',
         pago1: { metodo: 'efectivo', monto: 0 },
@@ -742,6 +765,15 @@ document.addEventListener('alpine:init', () => {
                 this.mostrarError('Debe seleccionar un cliente para facturas a crédito.');
                 return;
             }
+            if (this.tipoFactura !== 'credito' && this.metodoPago === 'pago_movil'
+                && (!this.datosPago.referencia || !this.datosPago.telefono)) {
+                this.mostrarError('Complete la referencia y el teléfono del Pago Móvil.');
+                return;
+            }
+            if (this.tipoFactura !== 'credito' && this.metodoPago === 'transferencia' && !this.datosPago.referencia) {
+                this.mostrarError('Complete la referencia de la Transferencia.');
+                return;
+            }
             const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
             modal.show();
         },
@@ -767,6 +799,9 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify({
                         items,
                         metodo_pago: this.metodoPago,
+                        datos_pago: ['pago_movil', 'transferencia'].includes(this.metodoPago)
+                            ? this.datosPago
+                            : undefined,
                         pagos: this.metodoPago === 'mixto'
                             ? [
                                 { metodo: this.pago1.metodo, monto: parseFloat(this.pago1.monto) },
@@ -788,6 +823,7 @@ document.addEventListener('alpine:init', () => {
                     }
                     this.carrito = [];
                     this.metodoPago = 'efectivo';
+                    this.datosPago = { referencia: '', telefono: '' };
                     this.tipoFactura = 'contado';
                     this.clienteId = '';
                     this.pago1 = { metodo: 'efectivo', monto: 0 };

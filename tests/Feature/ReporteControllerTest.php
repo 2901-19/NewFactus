@@ -156,6 +156,16 @@ class ReporteControllerTest extends TestCase
         $this->assertEquals(580.0, $kpis['total_bs']);
     }
 
+    public function test_facturas_no_emite_html_antes_del_doctype()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->get('/reportes/facturas?desde=2026-07-01&hasta=2026-07-31');
+
+        $response->assertStatus(200);
+        $this->assertStringStartsWith('<!DOCTYPE html>', $response->getContent());
+    }
+
     public function test_facturas_export_csv()
     {
         $this->actingAs($this->cajero);

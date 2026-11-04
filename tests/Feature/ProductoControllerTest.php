@@ -88,6 +88,25 @@ class ProductoControllerTest extends TestCase
         $this->assertEquals('Harina PAN 1kg', $data[0]['nombre']);
     }
 
+    public function test_data_ignora_acentos_en_la_busqueda()
+    {
+        Producto::factory()->create(['nombre' => 'Azúcar Morena']);
+        Producto::factory()->create(['nombre' => 'Harina Pan']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=azucar');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Azúcar Morena', $data[0]['nombre']);
+
+        $response = $this->getJson('/productos/data?draw=1&start=0&length=10&search[value]=AZ%C3%9ACAR');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Azúcar Morena', $data[0]['nombre']);
+    }
+
     public function test_data_busca_por_nombre_de_presentacion()
     {
         $producto = Producto::factory()->create(['nombre' => 'Agua Mineral']);

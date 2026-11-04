@@ -194,6 +194,9 @@ class FacturaController extends Controller
             'pagos' => 'required_if:metodo_pago,mixto|array|size:2',
             'pagos.*.metodo' => ['required', Rule::in(CatalogoService::metodosValidos()), 'distinct'],
             'pagos.*.monto' => 'required|numeric|min:0.01',
+            'datos_pago' => 'nullable|array',
+            'datos_pago.referencia' => 'required_if:metodo_pago,pago_movil,transferencia|nullable|string|max:50',
+            'datos_pago.telefono' => 'required_if:metodo_pago,pago_movil|nullable|string|max:20',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
         ]);
@@ -292,6 +295,14 @@ class FacturaController extends Controller
                 }, $pagos);
             }
 
+            $datosPago = null;
+            if (in_array($request->metodo_pago, ['pago_movil', 'transferencia'], true)) {
+                $datosPago = ['referencia' => (string) $request->input('datos_pago.referencia')];
+                if ($request->metodo_pago === 'pago_movil') {
+                    $datosPago['telefono'] = (string) $request->input('datos_pago.telefono');
+                }
+            }
+
             $factura = Factura::create([
                 'correlativo' => $correlativo,
                 'cliente_id' => $request->cliente_id,
@@ -300,6 +311,7 @@ class FacturaController extends Controller
                 'tasa_cambio' => round($tasaEfectiva, 2),
                 'metodo_pago' => $request->estado === 'credito' ? 'credito' : $request->metodo_pago,
                 'detalle_pago' => $detallePago,
+                'datos_pago' => $datosPago,
                 'subtotal_bs' => $subtotalBs,
                 'iva_bs' => $ivaBs,
                 'total_bs' => $totalBs,
@@ -382,6 +394,9 @@ class FacturaController extends Controller
 
         $request->validate([
             'metodo_pago' => ['required', Rule::in(CatalogoService::metodosValidos())],
+            'datos_pago' => 'nullable|array',
+            'datos_pago.referencia' => 'required_if:metodo_pago,pago_movil,transferencia|nullable|string|max:50',
+            'datos_pago.telefono' => 'required_if:metodo_pago,pago_movil|nullable|string|max:20',
         ]);
 
         $tasaReferencia = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
@@ -394,11 +409,20 @@ class FacturaController extends Controller
         $pagoUsd = (float) $factura->total_usd;
         $pagoBs = round($pagoUsd * $tasaVigente, 2);
 
+        $datosPago = null;
+        if (in_array($request->metodo_pago, ['pago_movil', 'transferencia'], true)) {
+            $datosPago = ['referencia' => (string) $request->input('datos_pago.referencia')];
+            if ($request->metodo_pago === 'pago_movil') {
+                $datosPago['telefono'] = (string) $request->input('datos_pago.telefono');
+            }
+        }
+
         $factura->update([
             'metodo_pago' => $request->metodo_pago,
             'estado_credito' => 'cancelado',
             'pago_bs' => $pagoBs,
             'fecha_pago' => now(),
+            'datos_pago' => $datosPago,
         ]);
 
         return redirect()->route('facturas.creditos')

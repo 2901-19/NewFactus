@@ -93,6 +93,9 @@ class PrinterService
             $this->printer->setEmphasis(false);
             $this->printer->setTextSize(1, 1);
             $this->printer->text($this->ascii(Configuracion::obtener('nombre_negocio', config('app.name')))."\n");
+            if (Configuracion::obtener('rif') !== '') {
+                $this->printer->text($this->ascii('RIF: '.Configuracion::obtener('rif'))."\n");
+            }
             $this->printer->feed();
 
             $this->printer->setJustification(Printer::JUSTIFY_LEFT);
@@ -145,6 +148,7 @@ class PrinterService
                     $this->printer->setTextSize(1, 1);
                     $nombre = $this->ascii($nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago);
                     $this->printer->text('Pago: '.$nombre."\n");
+                    $this->imprimirDatosPago($factura->datos_pago);
                 }
                 $this->printer->feed();
             }
@@ -157,6 +161,7 @@ class PrinterService
                     $nombreMetodo = $this->ascii($nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago);
                     $this->printer->text('** CREDITO COBRADO **'."\n");
                     $this->printer->text('Pago: '.$nombreMetodo."\n");
+                    $this->imprimirDatosPago($factura->datos_pago);
                     $this->printer->text(Moneda::bs($factura->pago_bs)."\n");
                     $this->printer->text($this->ascii($factura->fecha_pago?->format('d/m/Y H:i') ?? '')."\n");
                 } else {
@@ -251,7 +256,7 @@ class PrinterService
         foreach ($items as $item) {
             $pesable = ! empty($item['pesable']);
             $precio = $pesable ? Moneda::n($item['precio_unitario']).'/kg' : Moneda::n($item['precio_unitario']);
-            $cant = $pesable ? '-' : (string) $item['cantidad'];
+            $cant = self::cantidadItem($item);
             $total = Moneda::n($item['total']);
             $subtotal += (float) $item['total'];
 
@@ -276,6 +281,30 @@ class PrinterService
     }
 
     /**
+     * Cantidad legible para el ticket: los pesables muestran los kg con 3
+     * decimales; el resto, la cantidad tal cual.
+     */
+    public static function cantidadItem(array $item): string
+    {
+        return ! empty($item['pesable'])
+            ? Moneda::n((float) $item['cantidad'], 3)
+            : (string) $item['cantidad'];
+    }
+
+    private function imprimirDatosPago(?array $datos): void
+    {
+        if (empty($datos['referencia'])) {
+            return;
+        }
+
+        $this->printer->text('Ref: '.$this->ascii((string) $datos['referencia'])."\n");
+
+        if (! empty($datos['telefono'])) {
+            $this->printer->text('Tel: '.$this->ascii((string) $datos['telefono'])."\n");
+        }
+    }
+
+    /**
      * Fila de 4 columnas con ancho dinámico por fila: la descripción
      * cede celdas para que los números (formato español 1.234,56) entren
      * completos y queden alineados a la derecha, con un espacio entre
@@ -284,7 +313,7 @@ class PrinterService
      */
     private function filaItems(string $cant, string $descripcion, string $precioU, string $precioT): string
     {
-        $anchoCant = 4;
+        $anchoCant = max(4, strlen($cant));
         $colCant = str_pad($cant, $anchoCant);
         $anchoPrecU = strlen($precioU);
         $anchoPrecT = strlen($precioT);

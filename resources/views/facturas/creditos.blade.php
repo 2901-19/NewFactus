@@ -65,7 +65,6 @@
 </div>
 <div class="text-muted small">Total: {{ $facturas->count() }} facturas</div>
 @include('facturas.partials.ver-modal')
-@endsection
 
 {{-- Modal de cobro --}}
 <div class="modal fade" id="cobroModal" tabindex="-1" data-bs-backdrop="static">
@@ -94,6 +93,14 @@
                             <option value="transferencia">Transferencia</option>
                         </select>
                     </div>
+                    <div class="mb-2" id="cobroRefWrap" style="display:none">
+                        <label class="form-label small">Referencia *</label>
+                        <input type="text" name="datos_pago[referencia]" id="cobroReferencia" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-2" id="cobroTelWrap" style="display:none">
+                        <label class="form-label small">Teléfono *</label>
+                        <input type="text" name="datos_pago[telefono]" id="cobroTelefono" class="form-control form-control-sm">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -105,6 +112,7 @@
         </div>
     </div>
 </div>
+@endsection
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -113,6 +121,19 @@ document.addEventListener('DOMContentLoaded', function () {
         order: [[4, 'desc']],
         pageLength: 25,
     });
+
+    const actualizarDatosCobro = () => {
+        const metodo = $('#cobroMetodo').val();
+        const requiereReferencia = metodo === 'pago_movil' || metodo === 'transferencia';
+        const requiereTelefono = metodo === 'pago_movil';
+        $('#cobroRefWrap').toggle(requiereReferencia);
+        $('#cobroTelWrap').toggle(requiereTelefono);
+        $('#cobroReferencia').prop('required', requiereReferencia);
+        $('#cobroTelefono').prop('required', requiereTelefono);
+    };
+
+    $('#cobroMetodo').on('change', actualizarDatosCobro);
+
     $(document).on('click', '.btn-abrir-cobro', function () {
         const btn = $(this);
         $('#cobroForm').attr('action', btn.data('url'));
@@ -120,6 +141,8 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#cobroUsd').text('US$ ' + btn.data('usd'));
         $('#cobroBs').text(btn.data('bs') !== '' ? 'Bs ' + btn.data('bs') : '—');
         $('#cobroMetodo').val('');
+        $('#cobroReferencia, #cobroTelefono').val('');
+        actualizarDatosCobro();
         new bootstrap.Modal(document.getElementById('cobroModal')).show();
     });
 });

@@ -144,8 +144,8 @@
         </tfoot>
     </table>
 </div>
-@endsection
 @include('facturas.partials.ver-modal')
+@endsection
 @push('scripts')
 @include('reportes.partials.filtro-fechas')
 <script>

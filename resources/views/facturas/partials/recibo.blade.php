@@ -2,6 +2,8 @@
     $esCredito = $factura->estado === 'credito';
     $tasaCambio = (float) $factura->tasa_cambio ?: 1;
     $nombreNegocio = \App\Models\Configuracion::obtener('nombre_negocio', config('app.name'));
+    $rifNegocio = \App\Models\Configuracion::obtener('rif');
+    $datosPago = $factura->datos_pago ?? [];
     $nombresMetodo = [
         'efectivo' => 'Efectivo',
         'punto' => 'Punto de Venta',
@@ -17,6 +19,9 @@
 <div class="recibo">
     <div class="recibo-head">
         <div class="recibo-brand">{{ $nombreNegocio }}</div>
+        @if ($rifNegocio)
+            <div class="small text-muted">RIF {{ $rifNegocio }}</div>
+        @endif
         <span class="recibo-titulo">FACTURA DE VENTA</span>
         <div>
             @if ($factura->estado === 'anulada')
@@ -68,7 +73,7 @@
                 @foreach ($factura->items as $item)
                 @php $esPesable = $item->unidad_medida === 'kg'; @endphp
                 <tr>
-                    <td class="cant">{{ $esPesable ? '—' : $item->cantidad }}</td>
+                    <td class="cant">{{ $esPesable ? \App\Support\Moneda::n($item->cantidad, 3) . ' kg' : $item->cantidad }}</td>
                     <td class="desc">
                         {{ $item->producto->nombre ?? 'Producto' }}
                         @if ($item->presentacion_nombre)<small class="text-muted"> ({{ $item->presentacion_nombre }})</small>@endif
@@ -122,11 +127,35 @@
                 <span>Pago</span>
                 <span>{{ $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago }}</span>
             </div>
+            @if (!empty($datosPago['referencia']))
+            <div class="fila-total">
+                <span>Referencia</span>
+                <span>{{ $datosPago['referencia'] }}</span>
+            </div>
+            @endif
+            @if (!empty($datosPago['telefono']))
+            <div class="fila-total">
+                <span>Teléfono</span>
+                <span>{{ $datosPago['telefono'] }}</span>
+            </div>
+            @endif
             @elseif ($factura->estado !== 'credito')
             <div class="fila-total">
                 <span>Pago</span>
                 <span>{{ $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago }}</span>
             </div>
+            @if (!empty($datosPago['referencia']))
+            <div class="fila-total">
+                <span>Referencia</span>
+                <span>{{ $datosPago['referencia'] }}</span>
+            </div>
+            @endif
+            @if (!empty($datosPago['telefono']))
+            <div class="fila-total">
+                <span>Teléfono</span>
+                <span>{{ $datosPago['telefono'] }}</span>
+            </div>
+            @endif
             @endif
             @if ($factura->estado === 'credito')
             <div class="recibo-sep"></div>
