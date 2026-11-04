@@ -120,6 +120,18 @@
                 <span>{{ $nombresMetodo[$pago['metodo']] ?? $pago['metodo'] }}</span>
                 <span>Bs {{ \App\Support\Moneda::n($pago['monto']) }}</span>
             </div>
+            @if (!empty($pago['referencia']))
+            <div class="fila-total">
+                <span>Referencia</span>
+                <span>{{ $pago['referencia'] }}</span>
+            </div>
+            @endif
+            @if (!empty($pago['telefono']))
+            <div class="fila-total">
+                <span>Teléfono</span>
+                <span>{{ $pago['telefono'] }}</span>
+            </div>
+            @endif
             @endforeach
             @elseif ($factura->estado === 'credito' && $factura->estado_credito === 'cancelado')
             <div class="recibo-sep"></div>

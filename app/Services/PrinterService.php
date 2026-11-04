@@ -143,6 +143,7 @@ class PrinterService
                     foreach ($factura->detalle_pago ?? [] as $pago) {
                         $nombre = $this->ascii($nombresMetodo[$pago['metodo']] ?? $pago['metodo']);
                         $this->printer->text(str_pad('  '.$nombre.':', 30).str_pad(Moneda::bs($pago['monto']), 16, STR_PAD_LEFT)."\n");
+                        $this->imprimirDatosPago($pago);
                     }
                 } else {
                     $this->printer->setTextSize(1, 1);

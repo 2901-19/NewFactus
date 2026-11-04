@@ -109,6 +109,12 @@
                         <div class="col-6">
                             <input type="number" min="0" step="0.01" x-model.number="pago1.monto" class="form-control form-control-sm" placeholder="Monto Bs">
                         </div>
+                        <div class="col-6" x-show="['pago_movil','transferencia'].includes(pago1.metodo)">
+                            <input type="text" x-model="pago1.referencia" class="form-control form-control-sm" placeholder="Referencia *">
+                        </div>
+                        <div class="col-6" x-show="pago1.metodo === 'pago_movil'">
+                            <input type="text" x-model="pago1.telefono" class="form-control form-control-sm" placeholder="Teléfono *">
+                        </div>
                         <div class="col-6">
                             <select x-model="pago2.metodo" class="form-select form-select-sm">
                                 <template x-for="m in opcionesPago2" :key="m">
@@ -118,6 +124,12 @@
                         </div>
                         <div class="col-6">
                             <input type="number" min="0" step="0.01" x-model.number="pago2.monto" class="form-control form-control-sm" placeholder="Monto Bs">
+                        </div>
+                        <div class="col-6" x-show="['pago_movil','transferencia'].includes(pago2.metodo)">
+                            <input type="text" x-model="pago2.referencia" class="form-control form-control-sm" placeholder="Referencia *">
+                        </div>
+                        <div class="col-6" x-show="pago2.metodo === 'pago_movil'">
+                            <input type="text" x-model="pago2.telefono" class="form-control form-control-sm" placeholder="Teléfono *">
                         </div>
                     </div>
                     <div class="small mt-2" :class="pagosValidos ? 'text-success' : 'text-danger'">
@@ -271,9 +283,25 @@
                                             <span x-text="nombreMetodo(pago1.metodo)"></span>
                                             <span x-text="'Bs ' + fmtMoneda(parseFloat(pago1.monto) || 0)"></span>
                                         </div>
+                                        <div class="fila-total" x-show="pago1.referencia">
+                                            <span>Referencia</span>
+                                            <span x-text="pago1.referencia"></span>
+                                        </div>
+                                        <div class="fila-total" x-show="pago1.telefono">
+                                            <span>Teléfono</span>
+                                            <span x-text="pago1.telefono"></span>
+                                        </div>
                                         <div class="fila-total">
                                             <span x-text="nombreMetodo(pago2.metodo)"></span>
                                             <span x-text="'Bs ' + fmtMoneda(parseFloat(pago2.monto) || 0)"></span>
+                                        </div>
+                                        <div class="fila-total" x-show="pago2.referencia">
+                                            <span>Referencia</span>
+                                            <span x-text="pago2.referencia"></span>
+                                        </div>
+                                        <div class="fila-total" x-show="pago2.telefono">
+                                            <span>Teléfono</span>
+                                            <span x-text="pago2.telefono"></span>
                                         </div>
                                     </div>
                                 </template>
@@ -359,8 +387,8 @@ document.addEventListener('alpine:init', () => {
         datosPago: { referencia: '', telefono: '' },
         tipoFactura: 'contado',
         clienteId: '',
-        pago1: { metodo: 'efectivo', monto: 0 },
-        pago2: { metodo: 'punto', monto: 0 },
+        pago1: { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' },
+        pago2: { metodo: 'punto', monto: 0, referencia: '', telefono: '' },
         cargando: false,
         nuevoCliente: { nombre: '', ci: '', telefono: '' },
         errorCliente: '',
@@ -774,6 +802,18 @@ document.addEventListener('alpine:init', () => {
                 this.mostrarError('Complete la referencia de la Transferencia.');
                 return;
             }
+            if (this.tipoFactura !== 'credito' && this.metodoPago === 'mixto') {
+                for (const pago of [this.pago1, this.pago2]) {
+                    if (['pago_movil', 'transferencia'].includes(pago.metodo) && !pago.referencia) {
+                        this.mostrarError('Complete la referencia de ' + this.nombreMetodo(pago.metodo) + '.');
+                        return;
+                    }
+                    if (pago.metodo === 'pago_movil' && !pago.telefono) {
+                        this.mostrarError('Complete el teléfono del Pago Móvil.');
+                        return;
+                    }
+                }
+            }
             const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
             modal.show();
         },
@@ -804,8 +844,8 @@ document.addEventListener('alpine:init', () => {
                             : undefined,
                         pagos: this.metodoPago === 'mixto'
                             ? [
-                                { metodo: this.pago1.metodo, monto: parseFloat(this.pago1.monto) },
-                                { metodo: this.pago2.metodo, monto: parseFloat(this.pago2.monto) },
+                                { metodo: this.pago1.metodo, monto: parseFloat(this.pago1.monto), referencia: this.pago1.referencia, telefono: this.pago1.telefono },
+                                { metodo: this.pago2.metodo, monto: parseFloat(this.pago2.monto), referencia: this.pago2.referencia, telefono: this.pago2.telefono },
                             ]
                             : undefined,
                         cliente_id: this.tipoFactura === 'credito' ? this.clienteId : null,
@@ -826,8 +866,8 @@ document.addEventListener('alpine:init', () => {
                     this.datosPago = { referencia: '', telefono: '' };
                     this.tipoFactura = 'contado';
                     this.clienteId = '';
-                    this.pago1 = { metodo: 'efectivo', monto: 0 };
-                    this.pago2 = { metodo: 'punto', monto: 0 };
+                    this.pago1 = { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' };
+                    this.pago2 = { metodo: 'punto', monto: 0, referencia: '', telefono: '' };
                 } else {
                     this.mostrarError('Error: ' + data.message);
                 }

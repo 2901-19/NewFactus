@@ -185,6 +185,19 @@ class FacturaController extends Controller
 
     public function store(Request $request)
     {
+        $reglasPago = [];
+        foreach ((array) $request->input('pagos') as $i => $pago) {
+            if (! is_array($pago)) {
+                continue;
+            }
+            if (in_array($pago['metodo'] ?? null, ['pago_movil', 'transferencia'], true)) {
+                $reglasPago["pagos.$i.referencia"] = 'required|string|max:50';
+            }
+            if (($pago['metodo'] ?? null) === 'pago_movil') {
+                $reglasPago["pagos.$i.telefono"] = 'required|string|max:20';
+            }
+        }
+
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
@@ -199,7 +212,7 @@ class FacturaController extends Controller
             'datos_pago.telefono' => 'required_if:metodo_pago,pago_movil|nullable|string|max:20',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
-        ]);
+        ] + $reglasPago);
 
         if ($request->estado === 'credito' && ! $request->cliente_id) {
             return back()->withErrors(['cliente_id' => 'Debe seleccionar un cliente para facturas a crédito.']);
@@ -291,7 +304,15 @@ class FacturaController extends Controller
                 }
 
                 $detallePago = array_map(function ($p) {
-                    return ['metodo' => $p['metodo'], 'monto' => round((float) $p['monto'], 2)];
+                    $detalle = ['metodo' => $p['metodo'], 'monto' => round((float) $p['monto'], 2)];
+                    if (in_array($p['metodo'], ['pago_movil', 'transferencia'], true)) {
+                        $detalle['referencia'] = (string) $p['referencia'];
+                    }
+                    if ($p['metodo'] === 'pago_movil') {
+                        $detalle['telefono'] = (string) $p['telefono'];
+                    }
+
+                    return $detalle;
                 }, $pagos);
             }
 

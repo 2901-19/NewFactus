@@ -1054,4 +1054,91 @@ class FacturaControllerTest extends TestCase
         $response->assertSee('RIF J-12345678-9');
         $response->assertSee('0,800 kg');
     }
+
+    public function test_store_pago_mixto_requiere_referencia_y_telefono_en_pago_movil()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'pago_movil', 'monto' => 400.00],
+                ['metodo' => 'efectivo', 'monto' => 180.00],
+            ],
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['pagos.0.referencia', 'pagos.0.telefono']);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_store_pago_mixto_requiere_referencia_en_transferencia()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'efectivo', 'monto' => 400.00],
+                ['metodo' => 'transferencia', 'monto' => 180.00],
+            ],
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['pagos.1.referencia']);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_store_pago_mixto_guarda_referencia_y_telefono()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'pago_movil', 'monto' => 400.00, 'referencia' => '123456', 'telefono' => '04141234567'],
+                ['metodo' => 'efectivo', 'monto' => 180.00],
+            ],
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals([
+            ['metodo' => 'pago_movil', 'monto' => 400.0, 'referencia' => '123456', 'telefono' => '04141234567'],
+            ['metodo' => 'efectivo', 'monto' => 180.0],
+        ], $factura->detalle_pago);
+    }
+
+    public function test_recibo_pago_mixto_muestra_referencia()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'transferencia', 'monto' => 400.00, 'referencia' => '55443322'],
+                ['metodo' => 'efectivo', 'monto' => 180.00],
+            ],
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ])->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+
+        $response = $this->get("/facturas/{$factura->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('55443322');
+    }
 }
