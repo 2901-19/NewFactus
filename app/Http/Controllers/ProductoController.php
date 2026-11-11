@@ -288,23 +288,13 @@ class ProductoController extends Controller
 
     private function prepararPresentaciones(Request $request, float $costoUsd, array $presentaciones, string $unidadMedida): array
     {
-        if ($this->esPesable($unidadMedida)) {
-            $margen = (float) ($presentaciones[0]['margen'] ?? 0);
-
-            return [[
-                'nombre' => 'Kilogramo',
-                'factor_conversion' => 1,
-                'margen' => $margen,
-                'fuente_tasa' => $presentaciones[0]['fuente_tasa'] ?? 'promedio',
-                'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
-                'activa' => true,
-            ]];
-        }
+        $esPesable = $this->esPesable($unidadMedida);
 
         $resultado = [];
         foreach ($presentaciones as $index => $presentacion) {
             $margen = (float) $presentacion['margen'];
-            $factor = (float) $presentacion['factor_conversion'];
+            // Los pesables se venden por kilo: el factor siempre es 1.
+            $factor = $esPesable ? 1 : (float) $presentacion['factor_conversion'];
             $resultado[] = [
                 'nombre' => $presentacion['nombre'],
                 'factor_conversion' => $factor,
@@ -320,28 +310,7 @@ class ProductoController extends Controller
 
     private function sincronizarPresentaciones(Request $request, Producto $producto, float $costoUsd, array $presentaciones, string $unidadMedida): void
     {
-        if ($this->esPesable($unidadMedida)) {
-            $idEnviado = (int) ($presentaciones[0]['id'] ?? 0);
-            $margen = (float) ($presentaciones[0]['margen'] ?? 0);
-            $datos = [
-                'nombre' => 'Kilogramo',
-                'factor_conversion' => 1,
-                'margen' => $margen,
-                'fuente_tasa' => $presentaciones[0]['fuente_tasa'] ?? 'promedio',
-                'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
-                'activa' => true,
-            ];
-
-            if ($idEnviado) {
-                $producto->presentaciones()->whereKeyNot($idEnviado)->delete();
-                $producto->presentaciones()->whereKey($idEnviado)->update($datos);
-            } else {
-                $producto->presentaciones()->delete();
-                $producto->presentaciones()->create($datos);
-            }
-
-            return;
-        }
+        $esPesable = $this->esPesable($unidadMedida);
 
         $idsEnviados = collect($presentaciones)
             ->pluck('id')
@@ -357,7 +326,8 @@ class ProductoController extends Controller
 
         foreach ($presentaciones as $index => $presentacion) {
             $margen = (float) $presentacion['margen'];
-            $factor = (float) $presentacion['factor_conversion'];
+            // Los pesables se venden por kilo: el factor siempre es 1.
+            $factor = $esPesable ? 1 : (float) $presentacion['factor_conversion'];
             $datos = [
                 'nombre' => $presentacion['nombre'],
                 'factor_conversion' => $factor,

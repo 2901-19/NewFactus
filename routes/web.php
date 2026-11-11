@@ -52,6 +52,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/productos/ajustar-inventario', [AjusteController::class, 'editarInventario'])
         ->name('productos.ajustar-inventario')
         ->middleware('permiso:actualizar-inventarios');
+    Route::get('/productos/ajustar-inventario/data', [AjusteController::class, 'inventarioData'])
+        ->name('productos.ajustar-inventario.data')
+        ->middleware('permiso:actualizar-inventarios');
     Route::post('/productos/{producto}/ajustar-inventario', [AjusteController::class, 'ajustarInventario'])
         ->name('productos.ajustar-inventario.actualizar')
         ->middleware('permiso:actualizar-inventarios');

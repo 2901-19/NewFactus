@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Services\PrecioService;
@@ -110,12 +111,51 @@ class AjusteController extends Controller
 
     public function editarInventario()
     {
-        $productos = Producto::whereNull('deleted_at')
-            ->where('unidad_medida', 'unidad')
-            ->with('categoria')
-            ->get();
+        $categorias = Categoria::orderBy('nombre')->get();
 
-        return view('productos.ajustar-inventario', compact('productos'));
+        return view('productos.ajustar-inventario', compact('categorias'));
+    }
+
+    public function inventarioData(Request $request)
+    {
+        $draw = (int) $request->integer('draw');
+        $start = (int) $request->integer('start');
+        $length = $request->integer('length');
+        $categoriaId = $request->integer('categoria_id');
+
+        // Solo productos que llevan control de inventario (unidad).
+        $base = fn () => Producto::whereNull('deleted_at')->where('unidad_medida', 'unidad')
+            ->when($categoriaId, fn ($q) => $q->where('categoria_id', $categoriaId));
+
+        $query = $base()->with('categoria');
+
+        BusquedaProductos::aplicar($query, (string) $request->input('search.value'), true);
+
+        $total = (clone $query)->count();
+
+        if ($length < 0) {
+            $length = $total;
+        }
+
+        $query->orderBy('nombre');
+
+        $productos = $query->offset($start)->limit($length ?: 100)->get();
+
+        $data = $productos->map(fn (Producto $p) => [
+            'id' => $p->id,
+            'nombre' => e($p->nombre),
+            'categoria' => $p->categoria?->nombre ? e($p->categoria->nombre) : '-',
+            'stock_actual' => (float) $p->stock_actual,
+            'unidad_medida' => $p->unidad_medida,
+            'controla_inventario' => $p->controla_inventario,
+        ]);
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $base()->count(),
+            'recordsFiltered' => $total,
+            'data' => $data,
+        ]);
     }
 
     public function ajustarInventario(Request $request, Producto $producto)

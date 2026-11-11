@@ -1,8 +1,14 @@
 @php
     $tasaPorDefecto = $opcionesTasa->keys()->first() ?? 'promedio';
-    $presentacionesIniciales = old('presentaciones', $producto?->presentaciones ?? [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'fuente_tasa' => $tasaPorDefecto, 'activa' => true]]);
-    $costoUsdInicial = old('costo_usd', $producto?->costo_usd ?? 0);
     $unidadMedidaInicial = old('unidad_medida', $producto?->unidad_medida ?? 'unidad');
+    $presentacionesIniciales = old('presentaciones', $producto?->presentaciones ?? [[
+        'nombre' => $unidadMedidaInicial === 'kg' ? 'Kilogramo' : 'Unidad',
+        'factor_conversion' => 1,
+        'margen' => 0,
+        'fuente_tasa' => $tasaPorDefecto,
+        'activa' => true,
+    ]]);
+    $costoUsdInicial = old('costo_usd', $producto?->costo_usd ?? 0);
     $stockInicial = old('stock_actual', $producto?->stock_actual ?? 0);
     $uniLoteInicial = old('unidades_lote', $producto?->unidades_lote ?? '');
     $precioLoteInicial = old('precio_lote', $producto?->precio_lote ?? '');
@@ -139,104 +145,75 @@
     <div class="card-body">
         @error('presentaciones') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
 
-        <template x-if="medida === 'unidad'">
-            <div>
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-start" style="width:22%">Presentación</th>
-                                <th class="text-center" style="width:100px">Unidades</th>
-                                <th class="text-center" style="width:100px">Margen (%)</th>
-                                <th class="text-center" style="width:150px">Tipo de tasa</th>
-                                <th class="text-end" style="width:100px">Precio USD</th>
-                                <th class="text-end" style="width:120px">Precio Bs</th>
-                                <th class="text-center text-nowrap" style="width:130px">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="(pres, i) in presentaciones" :key="i">
-                                <tr>
-                                    <td class="text-start">
-                                        <input type="hidden" :name="'presentaciones[' + i + '][id]'" :value="pres.id || ''">
-                                        <input type="text" class="form-control" :name="'presentaciones[' + i + '][nombre]'" x-model="pres.nombre" required>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="0.0001" min="0.0001" class="form-control text-center" :name="'presentaciones[' + i + '][factor_conversion]'" x-model.number="pres.factor_conversion" required>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="0.01" min="0" class="form-control text-center" :name="'presentaciones[' + i + '][margen]'" x-model.number="pres.margen" required>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm" :name="'presentaciones[' + i + '][fuente_tasa]'" x-model="pres.fuente_tasa">
-                                            @forelse ($opcionesTasa as $tipo => $nombre)
-                                                <option value="{{ $tipo }}">{{ $nombre }}</option>
-                                            @empty
-                                                <option value="" disabled>No hay tasas activas</option>
-                                            @endforelse
-                                        </select>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="fw-bold" x-text="'$' + fmtMoneda(precioPor(i))"></span>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="fw-bold" x-text="'Bs ' + fmtMoneda(precioPor(i) * (tasaDe(pres.fuente_tasa) || 1))"></span>
-                                    </td>
-                                    <td class="text-center text-nowrap">
-                                        <div class="d-inline-flex align-items-center gap-2">
-                                            <input type="hidden" :name="'presentaciones[' + i + '][activa]'" :value="pres.activa ? '1' : '0'">
-                                            <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input" type="checkbox" role="switch" x-model="pres.activa" :id="'activa-' + i">
-                                                <label class="form-check-label small text-muted" :for="'activa-' + i" x-text="pres.activa ? 'Sí' : 'No'"></label>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" @click="quitar(i)" :disabled="presentaciones.length <= 1" title="Quitar presentación">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary" @click="agregar">
-                    <i class="bi bi-plus-lg"></i> Agregar presentación
-                </button>
-            </div>
-        </template>
-
-        <template x-if="medida === 'kg'">
-            <div>
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label">Presentación</label>
-                        <input type="text" class="form-control" value="Kilogramo" disabled>
-                        <input type="hidden" name="presentaciones[0][nombre]" value="Kilogramo">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Margen (%)</label>
-                        <input type="number" step="0.01" min="0" class="form-control" name="presentaciones[0][margen]" x-model.number="presentaciones[0].margen" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Tipo de tasa</label>
-                        <select class="form-select" name="presentaciones[0][fuente_tasa]" x-model="presentaciones[0].fuente_tasa">
-                            @forelse ($opcionesTasa as $tipo => $nombre)
-                                <option value="{{ $tipo }}">{{ $nombre }}</option>
-                            @empty
-                                <option value="" disabled>No hay tasas activas</option>
-                            @endforelse
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label text-muted">Precio por kilo</label>
-                        <div class="fw-bold" x-text="'$ ' + fmtMoneda(precioKiloUsd) + ' / Bs ' + fmtMoneda(precioKiloBs)"></div>
-                    </div>
-                </div>
-                <input type="hidden" name="presentaciones[0][id]" :value="presentaciones.length ? (presentaciones[0].id || '') : ''">
-                <input type="hidden" name="presentaciones[0][factor_conversion]" value="1">
-                <input type="hidden" name="presentaciones[0][activa]" value="1">
-            </div>
-        </template>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start" style="width:22%">Presentación</th>
+                        <th class="text-center" style="width:100px" x-text="medida === 'kg' ? 'Factor (kg)' : 'Unidades'"></th>
+                        <th class="text-center" style="width:100px">Margen (%)</th>
+                        <th class="text-center" style="width:150px">Tipo de tasa</th>
+                        <th class="text-end" style="width:100px">Precio USD</th>
+                        <th class="text-end" style="width:120px">Precio Bs</th>
+                        <th class="text-center text-nowrap" style="width:130px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="(pres, i) in presentaciones" :key="i">
+                        <tr>
+                            <td class="text-start">
+                                <input type="hidden" :name="'presentaciones[' + i + '][id]'" :value="pres.id || ''">
+                                <input type="text" class="form-control" :name="'presentaciones[' + i + '][nombre]'" x-model="pres.nombre" required>
+                            </td>
+                            <td class="text-center">
+                                <template x-if="medida === 'unidad'">
+                                    <input type="number" step="0.0001" min="0.0001" class="form-control text-center" :name="'presentaciones[' + i + '][factor_conversion]'" x-model.number="pres.factor_conversion" required>
+                                </template>
+                                <template x-if="medida === 'kg'">
+                                    <div>
+                                        <input type="hidden" :name="'presentaciones[' + i + '][factor_conversion]'" value="1">
+                                        <input type="number" class="form-control text-center" value="1" disabled>
+                                    </div>
+                                </template>
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" class="form-control text-center" :name="'presentaciones[' + i + '][margen]'" x-model.number="pres.margen" required>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm" :name="'presentaciones[' + i + '][fuente_tasa]'" x-model="pres.fuente_tasa">
+                                    @forelse ($opcionesTasa as $tipo => $nombre)
+                                        <option value="{{ $tipo }}">{{ $nombre }}</option>
+                                    @empty
+                                        <option value="" disabled>No hay tasas activas</option>
+                                    @endforelse
+                                </select>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold" x-text="'$' + fmtMoneda(precioPor(i))"></span>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold" x-text="'Bs ' + fmtMoneda(precioPor(i) * (tasaDe(pres.fuente_tasa) || 1))"></span>
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <div class="d-inline-flex align-items-center gap-2">
+                                    <input type="hidden" :name="'presentaciones[' + i + '][activa]'" :value="pres.activa ? '1' : '0'">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch" x-model="pres.activa" :id="'activa-' + i">
+                                        <label class="form-check-label small text-muted" :for="'activa-' + i" x-text="pres.activa ? 'Sí' : 'No'"></label>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @click="quitar(i)" :disabled="presentaciones.length <= 1" title="Quitar presentación">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="agregar">
+            <i class="bi bi-plus-lg"></i> Agregar presentación
+        </button>
     </div>
 </div>
 </div>

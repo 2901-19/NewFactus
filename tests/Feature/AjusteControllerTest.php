@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
@@ -146,5 +147,76 @@ class AjusteControllerTest extends TestCase
         $response->assertJson(['success' => true]);
         $this->assertDatabaseHas('productos', ['id' => $producto->id, 'costo_usd' => 5.00]);
         $this->assertDatabaseHas('producto_presentaciones', ['id' => $pres->id, 'margen' => 20, 'precio_usd' => 6.00]);
+    }
+
+    public function test_editar_inventario_muestra_filtro_de_categorias()
+    {
+        Categoria::factory()->create(['nombre' => 'Víveres']);
+        $this->actingAs($this->user);
+
+        $response = $this->get('/productos/ajustar-inventario');
+
+        $response->assertStatus(200);
+        $response->assertSee('Actualizar Inventario');
+        $response->assertSee('Víveres');
+    }
+
+    public function test_inventario_data_solo_devuelve_productos_con_inventario()
+    {
+        $unidad = Producto::factory()->create(['nombre' => 'Harina', 'unidad_medida' => 'unidad']);
+        Producto::factory()->create(['nombre' => 'Queso', 'unidad_medida' => 'kg']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/ajustar-inventario/data?draw=1&start=0&length=10');
+
+        $response->assertStatus(200);
+        $response->assertJson(['draw' => 1]);
+        $response->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Harina', $data[0]['nombre']);
+        $this->assertEquals($unidad->id, $data[0]['id']);
+        $this->assertTrue($data[0]['controla_inventario']);
+    }
+
+    public function test_inventario_data_pagina()
+    {
+        Producto::factory()->count(3)->create(['unidad_medida' => 'unidad']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/ajustar-inventario/data?draw=1&start=0&length=2');
+
+        $response->assertStatus(200);
+        $this->assertEquals(3, $response->json('recordsTotal'));
+        $this->assertEquals(3, $response->json('recordsFiltered'));
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_inventario_data_busca_e_ignora_acentos()
+    {
+        Producto::factory()->create(['nombre' => 'Azúcar Morena', 'unidad_medida' => 'unidad']);
+        Producto::factory()->create(['nombre' => 'Harina Pan', 'unidad_medida' => 'unidad']);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/ajustar-inventario/data?draw=1&start=0&length=10&search[value]=azucar');
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Azúcar Morena', $data[0]['nombre']);
+    }
+
+    public function test_inventario_data_filtra_por_categoria()
+    {
+        $viveres = Categoria::factory()->create(['nombre' => 'Víveres']);
+        $limpieza = Categoria::factory()->create(['nombre' => 'Limpieza']);
+        Producto::factory()->create(['nombre' => 'Harina', 'unidad_medida' => 'unidad', 'categoria_id' => $viveres->id]);
+        Producto::factory()->create(['nombre' => 'Cloro', 'unidad_medida' => 'unidad', 'categoria_id' => $limpieza->id]);
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/productos/ajustar-inventario/data?draw=1&start=0&length=10&categoria_id='.$limpieza->id);
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Cloro', $data[0]['nombre']);
     }
 }

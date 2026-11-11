@@ -386,7 +386,7 @@ class ProductoControllerTest extends TestCase
         $this->assertDatabaseHas('productos', ['nombre' => 'Actualizado']);
     }
 
-    public function test_update_convertir_a_kg_deja_una_sola_presentacion()
+    public function test_update_pesable_permite_varias_presentaciones_con_factor_uno()
     {
         $producto = Producto::factory()->create(['nombre' => 'Granos', 'stock_actual' => 10]);
         $unidad = ProductoPresentacion::factory()->create([
@@ -416,7 +416,8 @@ class ProductoControllerTest extends TestCase
             'impuesto_id' => $producto->impuesto_id,
             'estado' => $producto->estado,
             'presentaciones' => [
-                ['id' => $unidad->id, 'nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 20, 'fuente_tasa' => 'promedio', 'activa' => true],
+                ['id' => $unidad->id, 'nombre' => 'Kilogramo', 'factor_conversion' => 5, 'margen' => 20, 'fuente_tasa' => 'promedio', 'activa' => true],
+                ['nombre' => 'Media', 'factor_conversion' => 0.5, 'margen' => 15, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 
@@ -426,9 +427,37 @@ class ProductoControllerTest extends TestCase
         $this->assertEquals('kg', $producto->unidad_medida);
         $this->assertEquals(0, $producto->stock_actual);
         $this->assertFalse($producto->controla_inventario);
-        $this->assertCount(1, $producto->presentaciones);
-        $this->assertEquals('Kilogramo', $producto->presentaciones->first()->nombre);
-        $this->assertEquals(1, $producto->presentaciones->first()->factor_conversion);
+        $this->assertCount(2, $producto->presentaciones);
+
+        // En pesables el factor se fuerza a 1, aunque el form envíe otro valor.
+        $this->assertEqualsCanonicalizing(
+            ['Kilogramo', 'Media'],
+            $producto->presentaciones->pluck('nombre')->all()
+        );
+        $this->assertEquals([1.0, 1.0], $producto->presentaciones->pluck('factor_conversion')->all());
+    }
+
+    public function test_store_pesable_con_dos_presentaciones()
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Queso Fresco',
+            'costo_usd' => 4.00,
+            'unidad_medida' => 'kg',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 30, 'fuente_tasa' => 'promedio', 'activa' => true],
+                ['nombre' => 'Media', 'factor_conversion' => 0.5, 'margen' => 25, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+
+        $producto = Producto::where('nombre', 'Queso Fresco')->first();
+        $this->assertEquals('kg', $producto->unidad_medida);
+        $this->assertCount(2, $producto->presentaciones);
+        $this->assertEquals([1.0, 1.0], $producto->presentaciones->pluck('factor_conversion')->all());
     }
 
     public function test_destroy_desactiva_producto()
