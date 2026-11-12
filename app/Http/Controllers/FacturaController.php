@@ -16,6 +16,7 @@ use App\Services\StockService;
 use App\Services\TasaCambioService;
 use App\Support\BusquedaProductos;
 use App\Support\Moneda;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -216,6 +217,7 @@ class FacturaController extends Controller
             'datos_pago' => 'nullable|array',
             'datos_pago.referencia' => 'required_if:metodo_pago,pago_movil,transferencia|nullable|string|max:50',
             'datos_pago.telefono' => 'required_if:metodo_pago,pago_movil|nullable|string|max:20',
+            'idempotencia_key' => 'nullable|string|max:64',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
         ] + $reglasPago);
@@ -226,6 +228,22 @@ class FacturaController extends Controller
 
         // Si está activo, el POS permite vender sin stock y no mueve el inventario.
         $ventaSinStock = Configuracion::obtener('permitir_venta_sin_stock', '0') === '1';
+
+        $idempotenciaKey = $request->input('idempotencia_key');
+
+        // Idempotencia: si ya existe una factura con esta clave, devolverla sin crear otra.
+        if ($idempotenciaKey) {
+            $existente = Factura::where('idempotencia_key', $idempotenciaKey)->first();
+            if ($existente) {
+                return response()->json([
+                    'success' => true,
+                    'correlativo' => $existente->correlativo,
+                    'factura_id' => $existente->id,
+                    'impreso' => true,
+                    'impresion_error' => null,
+                ]);
+            }
+        }
 
         $correlativo = $this->generarCorrelativo();
 
@@ -335,27 +353,45 @@ class FacturaController extends Controller
                 }
             }
 
-            $factura = Factura::create([
-                'correlativo' => $correlativo,
-                'cliente_id' => $request->cliente_id,
-                'user_id' => auth()->id(),
-                'productos' => $itemsData,
-                'tasa_cambio' => round($tasaEfectiva, 2),
-                'metodo_pago' => $request->estado === 'credito' ? 'credito' : $request->metodo_pago,
-                'detalle_pago' => $detallePago,
-                'datos_pago' => $datosPago,
-                'subtotal_bs' => $subtotalBs,
-                'iva_bs' => $ivaBs,
-                'total_bs' => $totalBs,
-                'total_usd' => $totalUsd,
-                'estado' => $request->estado,
-                'estado_credito' => $request->estado === 'credito' ? 'pendiente' : null,
-                'fecha_venta' => now(),
-            ]);
+            try {
+                $factura = Factura::create([
+                    'correlativo' => $correlativo,
+                    'cliente_id' => $request->cliente_id,
+                    'user_id' => auth()->id(),
+                    'productos' => $itemsData,
+                    'tasa_cambio' => round($tasaEfectiva, 2),
+                    'metodo_pago' => $request->estado === 'credito' ? 'credito' : $request->metodo_pago,
+                    'detalle_pago' => $detallePago,
+                    'datos_pago' => $datosPago,
+                    'idempotencia_key' => $idempotenciaKey,
+                    'subtotal_bs' => $subtotalBs,
+                    'iva_bs' => $ivaBs,
+                    'total_bs' => $totalBs,
+                    'total_usd' => $totalUsd,
+                    'estado' => $request->estado,
+                    'estado_credito' => $request->estado === 'credito' ? 'pendiente' : null,
+                    'fecha_venta' => now(),
+                ]);
 
-            foreach ($itemsData as $item) {
-                $item['factura_id'] = $factura->id;
-                ItemFactura::create($item);
+                foreach ($itemsData as $item) {
+                    $item['factura_id'] = $factura->id;
+                    ItemFactura::create($item);
+                }
+            } catch (UniqueConstraintViolationException $e) {
+                // Carrera: otro request ya insertó la misma clave idempotente.
+                DB::rollBack();
+                $existente = Factura::where('idempotencia_key', $idempotenciaKey)->first();
+                if ($existente) {
+                    return response()->json([
+                        'success' => true,
+                        'correlativo' => $existente->correlativo,
+                        'factura_id' => $existente->id,
+                        'impreso' => true,
+                        'impresion_error' => null,
+                    ]);
+                }
+
+                throw $e;
             }
 
             DB::commit();

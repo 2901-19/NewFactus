@@ -331,7 +331,7 @@
                 </div>
                 <div class="modal-footer py-2">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-sm btn-success" @click="guardarFactura" :disabled="metodoPago === 'mixto' && !pagosValidos">
+                    <button type="button" class="btn btn-sm btn-success" @click="guardarFactura" :disabled="cargando || (metodoPago === 'mixto' && !pagosValidos)">
                         <i class="bi bi-check-lg"></i> Facturar
                     </button>
                 </div>
@@ -391,6 +391,7 @@ document.addEventListener('alpine:init', () => {
         pago1: { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' },
         pago2: { metodo: 'punto', monto: 0, referencia: '', telefono: '' },
         cargando: false,
+        idempotenciaKey: null,
         nuevoCliente: { nombre: '', ci: '', telefono: '' },
         errorCliente: '',
         guardandoCliente: false,
@@ -817,11 +818,16 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
             }
+            // Clave idempotente: se genera una sola vez por venta y se reutiliza en reintentos.
+            if (!this.idempotenciaKey) {
+                this.idempotenciaKey = (crypto.randomUUID ? crypto.randomUUID() : 'vta-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+            }
             const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
             modal.show();
         },
 
         async guardarFactura() {
+            if (this.cargando) return;
             this.cargando = true;
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
             if (modal) modal.hide();
@@ -842,6 +848,7 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify({
                         items,
                         metodo_pago: this.metodoPago,
+                        idempotencia_key: this.idempotenciaKey,
                         datos_pago: ['pago_movil', 'transferencia'].includes(this.metodoPago)
                             ? this.datosPago
                             : undefined,
@@ -867,6 +874,7 @@ document.addEventListener('alpine:init', () => {
                     this.carrito = [];
                     this.metodoPago = 'efectivo';
                     this.datosPago = { referencia: '', telefono: '' };
+                    this.idempotenciaKey = null;
                     this.tipoFactura = 'contado';
                     this.clienteId = '';
                     this.pago1 = { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' };

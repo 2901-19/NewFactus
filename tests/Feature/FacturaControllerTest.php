@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\Factura;
 use App\Models\Impuesto;
+use App\Models\ItemFactura;
 use App\Models\Permiso;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
@@ -1182,5 +1183,84 @@ class FacturaControllerTest extends TestCase
 
         $this->producto->refresh();
         $this->assertEquals(0, (float) $this->producto->stock_actual);
+    }
+
+    public function test_doble_envio_con_misma_clave_idempotente_crea_una_sola_factura()
+    {
+        $this->actingAs($this->cajero);
+        $key = '11111111-1111-4111-8111-111111111111';
+
+        // Mismo payload y misma clave: replica el doble clic en "Facturar".
+        $payload = [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'idempotencia_key' => $key,
+            'items' => [$this->crearItemData(['cantidad' => 2])],
+        ];
+
+        $primero = $this->postJson('/facturas', $payload);
+        $segundo = $this->postJson('/facturas', $payload);
+
+        $primero->assertJson(['success' => true]);
+        $segundo->assertJson(['success' => true]);
+
+        // Ambos responden con el mismo correlativo y la misma factura.
+        $this->assertEquals($primero->json('correlativo'), $segundo->json('correlativo'));
+        $this->assertEquals($primero->json('factura_id'), $segundo->json('factura_id'));
+
+        // Solo se creó UNA factura y sus items una sola vez.
+        $this->assertEquals(1, Factura::count());
+        $this->assertEquals(1, ItemFactura::count());
+
+        // El stock se descontó una sola vez (125 - 2 = 123).
+        $this->producto->refresh();
+        $this->assertEquals(123, (float) $this->producto->stock_actual);
+    }
+
+    public function test_doble_envio_sin_clave_crea_dos_facturas()
+    {
+        $this->actingAs($this->cajero);
+
+        // Sin clave idempotente, cada POST es una venta nueva (comportamiento previo).
+        $payload = [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData(['cantidad' => 2])],
+        ];
+
+        $this->postJson('/facturas', $payload)->assertJson(['success' => true]);
+        $this->postJson('/facturas', $payload)->assertJson(['success' => true]);
+
+        $this->assertEquals(2, Factura::count());
+    }
+
+    public function test_reintento_con_misma_clave_no_duplica_ni_vuelve_a_descontar_stock()
+    {
+        $this->actingAs($this->cajero);
+        $key = '22222222-2222-4222-8222-222222222222';
+
+        $payload = [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'idempotencia_key' => $key,
+            'items' => [$this->crearItemData(['cantidad' => 1])],
+        ];
+
+        $primero = $this->postJson('/facturas', $payload);
+        $facturaId = $primero->json('factura_id');
+
+        // Reintento (p. ej. tras un timeout de red): misma clave.
+        $reintento = $this->postJson('/facturas', $payload);
+
+        $reintento->assertJson(['success' => true]);
+        $this->assertEquals($facturaId, $reintento->json('factura_id'));
+        $this->assertEquals(1, Factura::count());
+
+        // El stock solo se descontó una vez (125 - 1 = 124).
+        $this->producto->refresh();
+        $this->assertEquals(124, (float) $this->producto->stock_actual);
     }
 }

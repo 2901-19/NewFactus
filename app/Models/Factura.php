@@ -19,6 +19,7 @@ class Factura extends Model
         'metodo_pago',
         'detalle_pago',
         'datos_pago',
+        'idempotencia_key',
         'subtotal_bs',
         'iva_bs',
         'total_bs',
