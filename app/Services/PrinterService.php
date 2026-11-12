@@ -25,7 +25,8 @@ class PrinterService
     {
         try {
             if ($tipo === 'network') {
-                $connector = new NetworkPrintConnector($host, $port);
+                // Timeout corto: evita que el POS se quede esperando si la impresora no responde.
+                $connector = new NetworkPrintConnector($host, $port, 3);
             } elseif ($tipo === 'windows' && $nombre) {
                 $connector = new WindowsPrintConnector($nombre);
             } else {
