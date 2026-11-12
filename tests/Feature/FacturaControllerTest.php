@@ -1141,4 +1141,46 @@ class FacturaControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('55443322');
     }
+
+    public function test_store_permite_vender_sin_stock_si_esta_configurado()
+    {
+        Configuracion::updateOrCreate(['clave' => 'permitir_venta_sin_stock'], ['valor' => '1']);
+        Configuracion::olvidar('permitir_venta_sin_stock');
+        $this->producto->update(['stock_actual' => 0]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData(['cantidad' => 5])],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $this->producto->refresh();
+        $this->assertEquals(0, (float) $this->producto->stock_actual);
+    }
+
+    public function test_anular_no_restaura_stock_si_se_vendio_sin_stock()
+    {
+        Configuracion::updateOrCreate(['clave' => 'permitir_venta_sin_stock'], ['valor' => '1']);
+        Configuracion::olvidar('permitir_venta_sin_stock');
+        $this->producto->update(['stock_actual' => 0]);
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData(['cantidad' => 5])],
+        ])->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+
+        $this->post("/facturas/{$factura->id}/anular")->assertRedirect();
+
+        $this->producto->refresh();
+        $this->assertEquals(0, (float) $this->producto->stock_actual);
+    }
 }

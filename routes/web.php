@@ -100,7 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion')->middleware('permiso:configuracion');
     Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar')->middleware('permiso:configuracion');
     Route::post('/herramientas/recordatorio', [HerramientasController::class, 'recordatorioGuardar'])->name('herramientas.recordatorio.guardar')->middleware('permiso:configuracion');
-
+    Route::post('/herramientas/venta-sin-stock', [HerramientasController::class, 'ventaSinStockGuardar'])->name('herramientas.venta-sin-stock.guardar')->middleware('permiso:configuracion');
     Route::resource('usuarios', UserController::class)->except('show')->middleware('permiso:gestionar-usuarios');
     Route::resource('roles', RolController::class)->except('show')->parameters(['roles' => 'rol'])->middleware('permiso:gestionar-usuarios');
 });

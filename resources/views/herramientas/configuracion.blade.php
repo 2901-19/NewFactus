@@ -40,6 +40,23 @@
 </div>
 
 <div class="card mt-3">
+    <div class="card-header">Ventas</div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('herramientas.venta-sin-stock.guardar') }}">
+            @csrf
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="permitir_venta_sin_stock"
+                    name="permitir_venta_sin_stock" value="1"
+                    @checked(old('permitir_venta_sin_stock', ($configs['permitir_venta_sin_stock'] ?? '0') === '1'))>
+                <label class="form-check-label" for="permitir_venta_sin_stock">Permitir vender productos sin stock</label>
+            </div>
+            <p class="text-muted small">Con esta opción activa, el POS no bloquea la venta cuando el stock está en cero y la factura no descuenta inventario (al anular tampoco lo restaura).</p>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-3">
     <div class="card-header">Recordatorio de Tasa de Cambio</div>
     <div class="card-body">
         <form method="POST" action="{{ route('herramientas.recordatorio.guardar') }}">

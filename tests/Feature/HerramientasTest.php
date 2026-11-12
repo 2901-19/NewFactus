@@ -77,6 +77,122 @@ class HerramientasTest extends TestCase
         $this->assertArrayNotHasKey('stock_actual', $producto);
     }
 
+    public function test_exportar_precios_incluye_unidad_medida_y_presentaciones()
+    {
+        $this->actingAs($this->admin);
+        $producto = Producto::factory()->create([
+            'nombre' => 'Queso',
+            'unidad_medida' => 'kg',
+            'costo_usd' => 4.00,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Kilogramo',
+            'factor_conversion' => 1,
+            'margen' => 30,
+            'precio_usd' => 5.20,
+            'fuente_tasa' => 'promedio',
+            'activa' => true,
+        ]);
+
+        $response = $this->get('/herramientas/exportar?tipos[]=precios');
+        $data = json_decode($response->getContent(), true);
+        $item = collect($data['precios'])->firstWhere('nombre', 'Queso');
+
+        $this->assertNotNull($item);
+        $this->assertEquals('kg', $item['unidad_medida']);
+        $this->assertFalse($item['controla_inventario']);
+        $this->assertEquals('Kilogramo', $item['presentaciones'][0]['nombre']);
+        $this->assertEquals(1, $item['presentaciones'][0]['factor_conversion']);
+        $this->assertEquals(30, $item['presentaciones'][0]['margen']);
+        $this->assertEquals('promedio', $item['presentaciones'][0]['fuente_tasa']);
+    }
+
+    public function test_guardar_venta_sin_stock_persiste_la_configuracion()
+    {
+        $this->actingAs($this->admin);
+
+        $this->from('/herramientas/configuracion')
+            ->post('/herramientas/venta-sin-stock', ['permitir_venta_sin_stock' => '1'])
+            ->assertRedirect('/herramientas/configuracion');
+        $this->assertEquals('1', Configuracion::obtener('permitir_venta_sin_stock'));
+
+        $this->from('/herramientas/configuracion')
+            ->post('/herramientas/venta-sin-stock', [])
+            ->assertRedirect('/herramientas/configuracion');
+        $this->assertEquals('0', Configuracion::obtener('permitir_venta_sin_stock'));
+    }
+
+    public function test_importar_precios_respeta_unidad_medida_al_crear()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Queso Importado',
+            'costo_usd' => 4.00,
+            'unidad_medida' => 'kg',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Kilogramo', 'factor_conversion' => 5, 'margen' => 30, 'fuente_tasa' => 'promedio', 'activa' => true],
+                ['nombre' => 'Media', 'factor_conversion' => 0.5, 'margen' => 25, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]]]);
+        $archivo = UploadedFile::fake()->createWithContent('precios.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['precios'],
+        ])->assertRedirect('/herramientas/datos');
+
+        $producto = Producto::where('nombre', 'Queso Importado')->first();
+
+        $this->assertNotNull($producto);
+        $this->assertEquals('kg', $producto->unidad_medida);
+        $this->assertEquals(0, (float) $producto->stock_actual);
+        $this->assertCount(2, $producto->presentaciones);
+        $this->assertEquals([1.0, 1.0], $producto->presentaciones->pluck('factor_conversion')->all());
+    }
+
+    public function test_importar_precios_actualiza_unidad_de_producto_existente()
+    {
+        $producto = Producto::factory()->create([
+            'nombre' => 'Queso',
+            'unidad_medida' => 'unidad',
+            'stock_actual' => 10,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 10,
+            'precio_usd' => 4.40,
+            'fuente_tasa' => 'promedio',
+            'activa' => true,
+        ]);
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Queso',
+            'costo_usd' => 4.00,
+            'unidad_medida' => 'kg',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 30, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]]]);
+        $archivo = UploadedFile::fake()->createWithContent('precios.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['precios'],
+        ])->assertRedirect('/herramientas/datos');
+
+        $producto->refresh();
+        $this->assertEquals('kg', $producto->unidad_medida);
+        $this->assertEquals(0, (float) $producto->stock_actual);
+        $this->assertEquals(1, $producto->presentaciones->first()->factor_conversion);
+    }
+
     public function test_importar_con_archivo_valido()
     {
         $this->actingAs($this->admin);

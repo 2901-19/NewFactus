@@ -47,6 +47,8 @@ class HerramientasController extends Controller
                 'precio_lote' => $p->precio_lote,
                 'estado' => $p->estado,
                 'impuesto' => $p->impuesto?->nombre,
+                'unidad_medida' => $p->unidad_medida,
+                'controla_inventario' => $p->controla_inventario,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
                     'factor_conversion' => $pr->factor_conversion,
@@ -137,46 +139,58 @@ class HerramientasController extends Controller
                             $producto = Producto::where('nombre', $item['nombre'])->first();
                             $costoUsd = (float) ($item['costo_usd'] ?? $producto->costo_usd ?? 0);
 
+                            // La unidad viaja en el export nuevo; en backups viejos se mantiene la actual.
+                            $unidad = array_key_exists('unidad_medida', $item)
+                                ? $this->normalizarUnidadMedida((string) $item['unidad_medida'])
+                                : ($producto?->unidad_medida ?? 'unidad');
+                            $esPesable = $unidad === 'kg';
+
                             $presentaciones = $item['presentaciones'] ?? [];
                             if (empty($presentaciones)) {
                                 $presentaciones = $this->presentacionesDesdeLegacy($item, $costoUsd);
                             }
 
-                            // Retrocompatibilidad: la tasa vivía a nivel de producto
-                            $datosPresentaciones = collect($presentaciones)->map(fn ($pr) => [
-                                'nombre' => $pr['nombre'] ?? 'Unidad',
-                                'factor_conversion' => (float) ($pr['factor_conversion'] ?? 1),
-                                'margen' => (float) ($pr['margen'] ?? 0),
-                                'precio_usd' => PrecioService::precioPresentacion(
-                                    $costoUsd,
-                                    (float) ($pr['margen'] ?? 0),
-                                    (float) ($pr['factor_conversion'] ?? 1)
-                                ),
-                                'fuente_tasa' => $pr['fuente_tasa'] ?? ($item['fuente_tasa'] ?? 'promedio'),
-                                'activa' => (bool) ($pr['activa'] ?? true),
-                            ])->values()->all();
+                            // Retrocompatibilidad: la tasa vivía a nivel de producto.
+                            // En pesables el factor siempre es 1 (precio por kilo).
+                            $datosPresentaciones = collect($presentaciones)->map(function ($pr) use ($costoUsd, $esPesable, $item) {
+                                $margen = (float) ($pr['margen'] ?? 0);
+                                $factor = $esPesable ? 1 : (float) ($pr['factor_conversion'] ?? 1);
+
+                                return [
+                                    'nombre' => $pr['nombre'] ?? 'Unidad',
+                                    'factor_conversion' => $factor,
+                                    'margen' => $margen,
+                                    'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, $factor),
+                                    'fuente_tasa' => $pr['fuente_tasa'] ?? ($item['fuente_tasa'] ?? 'promedio'),
+                                    'activa' => (bool) ($pr['activa'] ?? true),
+                                ];
+                            })->values()->all();
 
                             $estadoImportado = in_array($item['estado'] ?? null, ['disponible', 'no_disponible'], true)
                                 ? $item['estado']
                                 : (collect($datosPresentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible');
 
                             // Lote opcional: solo se toca si viene en el archivo (backups viejos no lo traen).
-                            $loteImportado = $this->loteDesdeItem($item);
+                            // Los pesables no llevan lote.
+                            $loteImportado = $esPesable ? [] : $this->loteDesdeItem($item);
 
                             $impuestoId = $this->impuestoIdDesdeItem($item, $producto?->impuesto_id);
 
                             if ($producto) {
                                 $producto->update([
                                     'costo_usd' => $costoUsd,
+                                    'unidad_medida' => $unidad,
                                     'impuesto_id' => $impuestoId,
                                     'estado' => $estadoImportado,
-                                ] + $loteImportado);
+                                ] + ($esPesable ? ['stock_actual' => 0] : []) + $loteImportado);
                                 $producto->presentaciones()->delete();
                                 $producto->presentaciones()->createMany($datosPresentaciones);
                             } else {
                                 $producto = Producto::create([
                                     'nombre' => $item['nombre'],
                                     'costo_usd' => $costoUsd,
+                                    'unidad_medida' => $unidad,
+                                    'stock_actual' => 0,
                                     'impuesto_id' => $impuestoId,
                                     'estado' => $estadoImportado,
                                 ] + $loteImportado);
@@ -644,6 +658,22 @@ class HerramientasController extends Controller
         }
 
         return back()->with('success', 'Recordatorio de tasa guardado correctamente.');
+    }
+
+    public function ventaSinStockGuardar(Request $request)
+    {
+        $request->validate([
+            // El switch no envía valor cuando se desmarca: se persiste siempre.
+            'permitir_venta_sin_stock' => 'nullable|boolean',
+        ]);
+
+        Configuracion::updateOrCreate(
+            ['clave' => 'permitir_venta_sin_stock'],
+            ['valor' => $request->boolean('permitir_venta_sin_stock') ? '1' : '0']
+        );
+        Configuracion::olvidar('permitir_venta_sin_stock');
+
+        return back()->with('success', 'Configuración de ventas guardada correctamente.');
     }
 
     private function impuestoIdDesdeItem(array $item, ?int $actual = null): ?int

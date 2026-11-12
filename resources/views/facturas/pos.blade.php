@@ -382,6 +382,7 @@ document.addEventListener('alpine:init', () => {
         clientes: @json($clientes),
         tasas: @json($tasas),
         tasaReferencia: '{{ $tasaReferenciaTipo }}',
+        permitirVentaSinStock: {{ $permitirVentaSinStock ? 'true' : 'false' }},
         carrito: [],
         metodoPago: 'efectivo',
         datosPago: { referencia: '', telefono: '' },
@@ -571,6 +572,7 @@ document.addEventListener('alpine:init', () => {
         maxPresentaciones(index) {
             const it = this.carrito[index];
             if (!it || !it.controla_inventario) return Infinity;
+            if (this.permitirVentaSinStock) return Infinity;
             const p = this.productos.find(x => x.id === it.id);
             if (!p) return Infinity;
             const factor = this.factorDe(it);
@@ -581,6 +583,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         hayStockPara(p, presId) {
+            if (this.permitirVentaSinStock) return true;
             if (!p.controla_inventario) return true;
             const pr = (p.presentaciones || []).find(pr => pr.id === presId);
             if (!pr) return true;

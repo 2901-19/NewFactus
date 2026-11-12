@@ -44,6 +44,11 @@ class FacturaController extends Controller
         DB::transaction(function () use ($factura) {
             $factura->update(['estado' => 'anulada', 'estado_credito' => null]);
 
+            // Si se permite vender sin stock, tampoco se restaura al anular.
+            if (Configuracion::obtener('permitir_venta_sin_stock', '0') === '1') {
+                return;
+            }
+
             $factura->load('items');
             $productos = Producto::withTrashed()
                 ->whereIn('id', $factura->items->pluck('producto_id'))
@@ -74,8 +79,9 @@ class FacturaController extends Controller
         $tasas = TasaCambio::ultimasPorTipo();
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
         $tasaReferenciaMonto = $tasas->has($tasaReferenciaTipo) ? (float) $tasas[$tasaReferenciaTipo]->monto : null;
+        $permitirVentaSinStock = Configuracion::obtener('permitir_venta_sin_stock', '0') === '1';
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo', 'tasaReferenciaMonto'));
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo', 'tasaReferenciaMonto', 'permitirVentaSinStock'));
     }
 
     public function posProductos(Request $request)
@@ -218,6 +224,9 @@ class FacturaController extends Controller
             return back()->withErrors(['cliente_id' => 'Debe seleccionar un cliente para facturas a crédito.']);
         }
 
+        // Si está activo, el POS permite vender sin stock y no mueve el inventario.
+        $ventaSinStock = Configuracion::obtener('permitir_venta_sin_stock', '0') === '1';
+
         $correlativo = $this->generarCorrelativo();
 
         $itemsData = [];
@@ -252,7 +261,7 @@ class FacturaController extends Controller
                 $factor = (float) $presentacion->factor_conversion;
                 $cantidadBase = round($cantidad * $factor, 4);
 
-                if ($producto->controla_inventario && $cantidadBase > (float) $producto->stock_actual) {
+                if (! $ventaSinStock && $producto->controla_inventario && $cantidadBase > (float) $producto->stock_actual) {
                     throw new \Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock_actual} {$producto->unidad_medida}.");
                 }
 
@@ -266,7 +275,9 @@ class FacturaController extends Controller
                 $precioBs = $precioUsd * $tasa;
                 $subtotalItemBs = round($precioBs * $cantidad, 2);
 
-                StockService::descontar($producto, $cantidadBase);
+                if (! $ventaSinStock) {
+                    StockService::descontar($producto, $cantidadBase);
+                }
 
                 $itemsData[] = [
                     'producto_id' => $producto->id,
