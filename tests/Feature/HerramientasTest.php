@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Categoria;
 use App\Models\Configuracion;
+use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
@@ -701,5 +702,176 @@ class HerramientasTest extends TestCase
             'activo' => false,
             'origen' => 'importado',
         ]);
+    }
+
+    // ===== DIAGNÓSTICO export/import =====
+
+    public function test_round_trip_precios_conserva_datos()
+    {
+        $this->actingAs($this->admin);
+        $impuesto = Impuesto::factory()->create(['nombre' => 'IVA', 'porcentaje' => 16]);
+        $producto = Producto::factory()->create([
+            'nombre' => 'Harina',
+            'costo_usd' => 2.00,
+            'unidades_lote' => 12,
+            'precio_lote' => 24.00,
+            'unidad_medida' => 'unidad',
+            'impuesto_id' => $impuesto->id,
+            'estado' => 'disponible',
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 20,
+            'precio_usd' => 2.40,
+            'fuente_tasa' => 'promedio',
+            'activa' => true,
+        ]);
+
+        $resp = $this->get('/herramientas/exportar?tipos[]=precios');
+        $export = json_decode($resp->getContent(), true);
+
+        $producto->forceDelete();
+
+        $archivo = UploadedFile::fake()->createWithContent('p.json', json_encode(['precios' => $export['precios']]));
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['precios'],
+        ])->assertSessionHas('success');
+
+        $nuevo = Producto::where('nombre', 'Harina')->first();
+        $this->assertNotNull($nuevo);
+        $this->assertEquals(2.00, (float) $nuevo->costo_usd);
+        $this->assertEquals(12, $nuevo->unidades_lote);
+        $this->assertEquals(24.00, (float) $nuevo->precio_lote);
+        $this->assertEquals('unidad', $nuevo->unidad_medida);
+        $this->assertEquals($impuesto->id, $nuevo->impuesto_id);
+        $this->assertCount(1, $nuevo->presentaciones);
+        $this->assertEquals('Unidad', $nuevo->presentaciones->first()->nombre);
+        $this->assertEquals(20, $nuevo->presentaciones->first()->margen);
+    }
+
+    public function test_importar_precios_dos_veces_no_duplica()
+    {
+        $this->actingAs($this->admin);
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Harina',
+            'costo_usd' => 1.00,
+            'unidad_medida' => 'unidad',
+            'estado' => 'disponible',
+            'presentaciones' => [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 10, 'fuente_tasa' => 'promedio', 'activa' => true]],
+        ]]]);
+        $archivo = fn () => UploadedFile::fake()->createWithContent('p.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['precios']]);
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['precios']]);
+
+        $this->assertEquals(1, Producto::where('nombre', 'Harina')->count());
+    }
+
+    public function test_importar_tasas_dos_veces_no_duplica_historial()
+    {
+        $this->actingAs($this->admin);
+        $json = json_encode(['tasas_cambio' => [
+            ['tipo' => 'bcv', 'monto' => 45, 'fecha' => '2026-01-01', 'activo' => true],
+        ]]);
+        $archivo = fn () => UploadedFile::fake()->createWithContent('t.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['tasas_cambio']]);
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['tasas_cambio']]);
+
+        $this->assertEquals(1, TasaCambio::where('tipo', 'bcv')->count());
+    }
+
+    public function test_importar_formato_antiguo_dos_veces_no_duplica()
+    {
+        $this->actingAs($this->admin);
+        $json = json_encode(['productos' => [[
+            'nombre' => 'Harina',
+            'costo_usd' => 1.00,
+            'unidad_medida' => 'unidad',
+            'precio_unitario_usd' => 1.10,
+            'fuente_tasa' => 'promedio',
+        ]]]);
+        $archivo = fn () => UploadedFile::fake()->createWithContent('p.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['productos']]);
+        $this->from('/herramientas/datos')->post('/herramientas/importar', ['archivo' => $archivo(), 'tipos' => ['productos']]);
+
+        $this->assertEquals(1, Producto::where('nombre', 'Harina')->count());
+    }
+
+    public function test_importar_archivo_con_bom()
+    {
+        $this->actingAs($this->admin);
+        $json = json_encode(['precios' => [[
+            'nombre' => 'Harina',
+            'costo_usd' => 1.00,
+            'unidad_medida' => 'unidad',
+            'estado' => 'disponible',
+            'presentaciones' => [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 10, 'fuente_tasa' => 'promedio', 'activa' => true]],
+        ]]]);
+        // BOM UTF-8 al inicio (como lo guarda Notepad en Windows).
+        $archivo = UploadedFile::fake()->createWithContent('p.json', "\xEF\xBB\xBF".$json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['precios'],
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('productos', ['nombre' => 'Harina']);
+    }
+
+    public function test_importar_json_invalido_devuelve_error()
+    {
+        $this->actingAs($this->admin);
+        $archivo = UploadedFile::fake()->createWithContent('p.json', '{esto no es json');
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['precios'],
+        ])->assertSessionHasErrors('archivo');
+    }
+
+    public function test_exportar_no_incluye_productos_desactivados()
+    {
+        $this->actingAs($this->admin);
+        $activo = Producto::factory()->create(['nombre' => 'Activo']);
+        $desactivado = Producto::factory()->create(['nombre' => 'Inactivo']);
+        $desactivado->delete();
+
+        $resp = $this->get('/herramientas/exportar?tipos[]=precios');
+        $nombres = collect(json_decode($resp->getContent(), true)['precios'])->pluck('nombre');
+
+        $this->assertContains('Activo', $nombres);
+        $this->assertNotContains('Inactivo', $nombres);
+    }
+
+    public function test_importar_inventario_resuelve_categoria_por_nombre()
+    {
+        $this->actingAs($this->admin);
+        $cat = Categoria::factory()->create(['nombre' => 'Víveres']);
+        Producto::factory()->create(['nombre' => 'Harina', 'categoria_id' => $cat->id, 'unidad_medida' => 'unidad']);
+
+        $resp = $this->get('/herramientas/exportar?tipos[]=inventario');
+        $inv = json_decode($resp->getContent(), true)['inventario'];
+
+        // El export incluye el nombre de la categoría.
+        $this->assertEquals('Víveres', $inv[0]['categoria_nombre']);
+
+        // Destino con la misma categoría pero con otro id.
+        Producto::where('nombre', 'Harina')->forceDelete();
+        $cat->forceDelete();
+        $catDestino = Categoria::factory()->create(['nombre' => 'Víveres']);
+
+        $archivo = UploadedFile::fake()->createWithContent('d.json', json_encode(['inventario' => $inv]));
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+            'tipos' => ['inventario'],
+        ])->assertSessionHas('success');
+
+        $nuevo = Producto::where('nombre', 'Harina')->first();
+        $this->assertEquals($catDestino->id, $nuevo->categoria_id);
     }
 }

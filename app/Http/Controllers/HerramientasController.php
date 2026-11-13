@@ -61,9 +61,10 @@ class HerramientasController extends Controller
         }
 
         if (in_array('inventario', $tipos)) {
-            $data['inventario'] = Producto::all()->map(fn ($p) => [
+            $data['inventario'] = Producto::with('categoria')->get()->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'categoria_id' => $p->categoria_id,
+                'categoria_nombre' => $p->categoria?->nombre,
                 'descripcion' => $p->descripcion,
                 'imagen' => $p->imagen,
                 'controla_inventario' => $p->controla_inventario,
@@ -104,6 +105,12 @@ class HerramientasController extends Controller
         ]);
 
         $contenido = file_get_contents($request->file('archivo')->getRealPath());
+
+        // Quitar BOM UTF-8 (lo agregan Notepad/Excel al guardar JSON en Windows).
+        if (str_starts_with($contenido, "\xEF\xBB\xBF")) {
+            $contenido = substr($contenido, 3);
+        }
+
         $data = json_decode($contenido, true);
 
         if (! $data) {
@@ -206,9 +213,21 @@ class HerramientasController extends Controller
                             if (! $existe) {
                                 $unidad = $this->normalizarUnidadMedida($item['unidad_medida'] ?? 'unidad');
                                 $esPesable = $unidad === 'kg';
+
+                                // Resolver categoría por nombre (los ids difieren entre instalaciones);
+                                // si no trae nombre, usar el id solo si existe en destino.
+                                $categoriaId = null;
+                                if (! empty($item['categoria_nombre'])) {
+                                    $categoriaId = Categoria::where('nombre', $item['categoria_nombre'])->value('id');
+                                } elseif (! empty($item['categoria_id'])) {
+                                    $categoriaId = Categoria::where('id', (int) $item['categoria_id'])->exists()
+                                        ? (int) $item['categoria_id']
+                                        : null;
+                                }
+
                                 $producto = Producto::create([
                                     'nombre' => $item['nombre'],
-                                    'categoria_id' => $item['categoria_id'] ?? null,
+                                    'categoria_id' => $categoriaId,
                                     'descripcion' => $item['descripcion'] ?? '',
                                     'imagen' => $item['imagen'] ?? null,
                                     'unidad_medida' => $unidad,
@@ -262,13 +281,25 @@ class HerramientasController extends Controller
                             }
 
                             $vigente = TasaCambio::ultimaDe($item['tipo']);
+                            $activo = (bool) ($item['activo'] ?? ($vigente ? $vigente->activo : true));
+
+                            // Evitar duplicar el historial al reimportar el mismo backup.
+                            $yaExiste = TasaCambio::where('tipo', $item['tipo'])
+                                ->where('monto', (float) $item['monto'])
+                                ->where('fecha', $item['fecha'])
+                                ->where('activo', $activo)
+                                ->exists();
+
+                            if ($yaExiste) {
+                                continue;
+                            }
 
                             TasaCambio::create([
                                 'tipo' => $item['tipo'],
                                 'nombre' => $item['nombre'] ?? $vigente->nombre ?? null,
                                 'monto' => $item['monto'],
                                 'fecha' => $item['fecha'],
-                                'activo' => $item['activo'] ?? ($vigente ? $vigente->activo : true),
+                                'activo' => $activo,
                                 'user_id' => auth()->id(),
                                 'origen' => 'importado',
                             ]);
@@ -292,6 +323,10 @@ class HerramientasController extends Controller
                     case 'productos':
                         foreach ($data['productos'] as $item) {
                             if (empty($item['nombre'])) {
+                                continue;
+                            }
+
+                            if (Producto::where('nombre', $item['nombre'])->exists()) {
                                 continue;
                             }
 
