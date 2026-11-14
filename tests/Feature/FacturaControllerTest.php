@@ -733,6 +733,17 @@ class FacturaControllerTest extends TestCase
         $response->assertViewHas('facturas');
     }
 
+    public function test_creditos_muestra_todos_sin_limite_de_20()
+    {
+        Factura::factory()->count(25)->create(['estado' => 'credito', 'estado_credito' => 'pendiente']);
+        $this->actingAs($this->cajero);
+
+        $response = $this->get('/creditos');
+
+        $response->assertStatus(200);
+        $this->assertCount(25, $response->viewData('facturas'));
+    }
+
     public function test_store_rechaza_venta_sin_tasa_configurada()
     {
         TasaCambio::query()->delete();

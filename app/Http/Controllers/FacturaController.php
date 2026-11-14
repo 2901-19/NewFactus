@@ -439,7 +439,7 @@ class FacturaController extends Controller
         $facturas = Factura::where('estado', 'credito')
             ->with('cliente')
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->get();
 
         $tasaReferencia = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
         $tasaVigente = $tasaReferencia ? (float) $tasaReferencia->monto : null;
