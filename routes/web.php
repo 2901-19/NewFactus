@@ -74,6 +74,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/pos/productos', [FacturaController::class, 'posProductos'])->name('facturas.pos.productos')->middleware('permiso:usar-pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('permiso:crear-facturas');
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('permiso:ver-facturas');
+    // Antes de /facturas/{factura} para que "data" no lo capture el binding.
+    Route::get('/facturas/data', [FacturaController::class, 'data'])->name('facturas.data')->middleware('permiso:ver-facturas');
     Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos')->middleware('permiso:gestionar-creditos');
     Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.recibo')->middleware('permiso:ver-facturas');
     Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito')->middleware('permiso:gestionar-creditos');

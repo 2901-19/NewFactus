@@ -9,6 +9,7 @@ use App\Models\ItemFactura;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
+use App\Models\User;
 use App\Services\CatalogoService;
 use App\Services\ImpuestoService;
 use App\Services\PrinterService;
@@ -25,11 +26,100 @@ class FacturaController extends Controller
 {
     public function index()
     {
-        $facturas = Factura::with('cliente', 'user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        return view('facturas.index');
+    }
 
-        return view('facturas.index', compact('facturas'));
+    /**
+     * Datos server-side para DataTables del listado de facturas.
+     * Escapa el HTML de las celdas de texto (DataTables inserta innerHTML).
+     */
+    public function data(Request $request)
+    {
+        $draw = (int) $request->integer('draw');
+        $start = (int) $request->integer('start');
+        $length = (int) $request->integer('length');
+
+        if ($length < 0) {
+            $length = Factura::count();
+        }
+
+        $query = Factura::with('cliente', 'user');
+
+        $busqueda = mb_strtolower(trim((string) $request->input('search.value')));
+        if ($busqueda !== '') {
+            $like = '%'.$busqueda.'%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw('LOWER(correlativo) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(estado) LIKE ?', [$like])
+                    ->orWhereRaw("LOWER(COALESCE(estado_credito, '')) LIKE ?", [$like])
+                    ->orWhereRaw('LOWER(CAST(fecha_venta AS TEXT)) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(CAST(total_bs AS TEXT)) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(CAST(total_usd AS TEXT)) LIKE ?', [$like])
+                    ->orWhereHas('cliente', fn ($c) => $c->whereRaw('LOWER(nombre) LIKE ?', [$like]))
+                    ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(usuario) LIKE ?', [$like]));
+            });
+        }
+
+        $total = Factura::count();
+        $filtradas = (clone $query)->count();
+
+        // Orden según el orden visible de las columnas de la vista (índice 5 = Fecha).
+        $orden = ['correlativo', 'cliente', 'usuario', 'total_bs', 'total_usd', 'fecha_venta', 'estado', 'fecha_venta'];
+        $columna = $orden[$request->integer('order.0.column')] ?? 'fecha_venta';
+        $dir = $request->input('order.0.dir') === 'asc' ? 'asc' : 'desc';
+
+        if ($columna === 'cliente') {
+            $query->orderBy(Cliente::select('nombre')->whereColumn('clientes.id', 'facturas.cliente_id'), $dir);
+        } elseif ($columna === 'usuario') {
+            $query->orderBy(User::select('usuario')->whereColumn('users.id', 'facturas.user_id'), $dir);
+        } else {
+            $query->orderBy($columna, $dir);
+        }
+
+        $facturas = $query->offset($start)->limit($length ?: 100)->get();
+
+        $data = $facturas->map(fn (Factura $f) => [
+            'DT_RowClass' => $f->estado === 'anulada' ? 'table-danger text-muted' : '',
+            'correlativo' => e($f->correlativo),
+            'cliente' => e($f->cliente->nombre ?? 'Contado'),
+            'usuario' => e($f->user->usuario ?? 'Sin dato'),
+            'total_bs' => 'Bs '.Moneda::n($f->total_bs),
+            'total_usd' => '$'.Moneda::n($f->total_usd),
+            'fecha' => $f->fecha_venta?->toDateTimeString(),
+            'estado' => $this->celdaEstado($f),
+            'acciones' => $this->celdaAcciones($f),
+        ]);
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $total,
+            'recordsFiltered' => $filtradas,
+            'data' => $data,
+        ]);
+    }
+
+    private function celdaEstado(Factura $factura): string
+    {
+        if ($factura->estado === 'anulada') {
+            return '<span class="badge bg-danger">Anulada</span>';
+        }
+
+        if ($factura->estado === 'credito') {
+            return '<span class="badge bg-warning text-dark">Crédito '.($factura->estado_credito === 'cancelado' ? '(Cancelado)' : '(Pendiente)').'</span>';
+        }
+
+        return '<span class="badge bg-success">Contado</span>';
+    }
+
+    private function celdaAcciones(Factura $factura): string
+    {
+        $html = '<button class="btn btn-sm btn-info btn-ver-factura" data-url="'.route('facturas.recibo', $factura->id).'"><i class="bi bi-eye"></i></button>';
+
+        if ($factura->estado !== 'anulada' && auth()->user()->hasPermiso('anular-facturas')) {
+            $html .= ' <button class="btn btn-sm btn-danger btn-anular" data-url="'.route('facturas.anular', $factura->id).'" data-correlativo="'.e($factura->correlativo).'"><i class="bi bi-x-circle"></i></button>';
+        }
+
+        return $html;
     }
 
     public function anular(Factura $factura)

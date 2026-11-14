@@ -19,37 +19,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($facturas as $f)
-            <tr class="{{ $f->estado === 'anulada' ? 'table-danger text-muted' : '' }}">
-                <td>{{ $f->correlativo }}</td>
-                <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
-                <td class="text-start">{{ $f->user->usuario ?? 'Sin dato' }}</td>
-                <td>Bs {{ \App\Support\Moneda::n($f->total_bs) }}</td>
-                <td>${{ \App\Support\Moneda::n($f->total_usd) }}</td>
-                <td>{{ $f->fecha_venta }}</td>
-                <td>
-                    @if ($f->estado === 'anulada')
-                        <span class="badge bg-danger">Anulada</span>
-                    @elseif ($f->estado === 'credito')
-                        <span class="badge bg-warning text-dark">
-                            Crédito {{ $f->estado_credito === 'cancelado' ? '(Cancelado)' : '(Pendiente)' }}
-                        </span>
-                    @else
-                        <span class="badge bg-success">Contado</span>
-                    @endif
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-info btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    @if ($f->estado !== 'anulada' && auth()->user()->hasPermiso('anular-facturas'))
-                        <button class="btn btn-sm btn-danger btn-anular" data-url="{{ route('facturas.anular', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
-                    @endif
-                </td>
-            </tr>
-            @endforeach
+            {{-- Filas construidas por DataTables a partir de /facturas/data (server-side) --}}
         </tbody>
     </table>
 </div>
@@ -60,8 +30,21 @@
 document.addEventListener('DOMContentLoaded', function () {
     $('#facturasTable').DataTable({
         language: window.DataTableSpanish,
+        serverSide: true,
+        processing: true,
+        ajax: '{{ route('facturas.data') }}',
         order: [[5, 'desc']],
         pageLength: 25,
+        columns: [
+            { data: 'correlativo' },
+            { data: 'cliente', className: 'text-start' },
+            { data: 'usuario', className: 'text-start' },
+            { data: 'total_bs' },
+            { data: 'total_usd' },
+            { data: 'fecha' },
+            { data: 'estado' },
+            { data: 'acciones', orderable: false, searchable: false },
+        ],
     });
     $(document).on('click', '.btn-anular', function () {
         const btn = $(this);

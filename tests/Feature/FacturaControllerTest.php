@@ -117,7 +117,56 @@ class FacturaControllerTest extends TestCase
         $response = $this->get('/facturas');
 
         $response->assertStatus(200);
-        $response->assertViewHas('facturas');
+        $response->assertViewIs('facturas.index');
+    }
+
+    public function test_data_pagina_por_servidor_sin_limite_de_20()
+    {
+        Factura::factory()->count(25)->create();
+        $this->actingAs($this->cajero);
+
+        $primera = $this->getJson('/facturas/data?draw=1&start=0&length=10&order%5B0%5D%5Bcolumn%5D=5&order%5B0%5D%5Bdir%5D=desc');
+
+        $primera->assertOk()
+            ->assertJsonPath('recordsTotal', 25)
+            ->assertJsonPath('recordsFiltered', 25)
+            ->assertJsonCount(10, 'data');
+
+        $ultima = $this->getJson('/facturas/data?draw=2&start=20&length=10');
+        $ultima->assertOk()->assertJsonCount(5, 'data');
+
+        // Orden por cliente (subconsulta) y por usuario no deben romper la consulta.
+        $this->getJson('/facturas/data?draw=3&start=0&length=10&order%5B0%5D%5Bcolumn%5D=1&order%5B0%5D%5Bdir%5D=asc')->assertOk();
+        $this->getJson('/facturas/data?draw=4&start=0&length=10&order%5B0%5D%5Bcolumn%5D=2&order%5B0%5D%5Bdir%5D=desc')->assertOk();
+    }
+
+    public function test_data_busca_por_correlativo_cliente_y_estado()
+    {
+        Factura::factory()->create(['correlativo' => 'FAC-BUSCA-01', 'estado' => 'anulada']);
+        $cliente = Cliente::factory()->create(['nombre' => 'Distribuidora Zurita']);
+        Factura::factory()->create(['cliente_id' => $cliente->id]);
+        Factura::factory()->count(3)->create();
+        $this->actingAs($this->cajero);
+
+        $porCorrelativo = $this->getJson('/facturas/data?draw=1&start=0&length=10&search%5Bvalue%5D=fac-busca');
+        $porCorrelativo->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonCount(1, 'data');
+
+        $porCliente = $this->getJson('/facturas/data?draw=2&start=0&length=10&search%5Bvalue%5D=zurita');
+        $porCliente->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonCount(1, 'data');
+
+        $porEstado = $this->getJson('/facturas/data?draw=3&start=0&length=10&search%5Bvalue%5D=anulada');
+        $porEstado->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonCount(1, 'data');
+    }
+
+    public function test_data_escapa_el_html_de_las_columnas_de_texto()
+    {
+        Factura::factory()->create(['correlativo' => '<script>x</script>']);
+        $this->actingAs($this->cajero);
+
+        $response = $this->getJson('/facturas/data?draw=1&start=0&length=10');
+
+        $response->assertOk();
+        $this->assertSame('&lt;script&gt;x&lt;/script&gt;', $response->json('data.0.correlativo'));
     }
 
     public function test_pos_muestra_formulario()
