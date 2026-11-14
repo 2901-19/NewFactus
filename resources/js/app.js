@@ -34,6 +34,16 @@ const Toast = Swal.mixin({
 });
 window.Toast = Toast;
 
+// Sesión CSRF expirada (419) en peticiones fetch (POS, ajustes, notificaciones): volver al login.
+const fetchOriginal = window.fetch.bind(window);
+window.fetch = async (...args) => {
+    const respuesta = await fetchOriginal(...args);
+    if (respuesta.status === 419 && !window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?expired=1';
+    }
+    return respuesta;
+};
+
 // Reemplazar alerts flash nativos por SweetAlert2
 document.addEventListener('DOMContentLoaded', function () {
     const successMsg = document.getElementById('flash-success')?.value;

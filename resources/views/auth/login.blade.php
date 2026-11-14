@@ -24,6 +24,10 @@
             <form method="POST" action="{{ route('login') }}" class="login-cuerpo">
                 @csrf
 
+                @if (request()->get('expired') === '1')
+                    <div class="login-error mb-2" role="alert">Tu sesión expiró, inicia sesión de nuevo.</div>
+                @endif
+
                 <div class="login-linea">
                     <label for="usuario" class="login-etiqueta">Usuario</label>
                     <div class="login-campo">
