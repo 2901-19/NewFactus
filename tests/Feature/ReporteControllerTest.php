@@ -298,6 +298,77 @@ class ReporteControllerTest extends TestCase
         $this->assertEquals(580.0, $desglose['efectivo']);
     }
 
+    public function test_kpis_con_filtro_tipo_credito_solo_suman_creditos_cobrados()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->crearFactura(['fecha_venta' => '2026-07-10']);
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-07-11',
+            'total_bs' => 9000,
+            'total_usd' => 200,
+        ]);
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-07-12',
+            'fecha_pago' => '2026-07-13',
+            'estado_credito' => 'cancelado',
+            'metodo_pago' => 'punto',
+            'total_bs' => 4000,
+            'total_usd' => 80,
+            'pago_bs' => 7000,
+        ]);
+
+        $response = $this->get('/reportes/facturas?desde=2026-07-01&hasta=2026-07-31&estado=credito');
+
+        $response->assertStatus(200);
+
+        $kpis = $response->viewData('kpis');
+        $this->assertEquals(1, $kpis['cantidad']);
+        $this->assertEquals(7000.0, $kpis['total_bs']);
+
+        $desglose = $response->viewData('desglose');
+        $this->assertEquals(7000.0, $desglose['punto']);
+        $this->assertEquals(0.0, $desglose['efectivo']);
+
+        $this->assertCount(2, $response->viewData('facturas'));
+    }
+
+    public function test_credito_cobrado_hoy_aparece_en_la_tabla_del_dia_del_cobro()
+    {
+        $this->actingAs($this->cajero);
+
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-07-11',
+            'fecha_pago' => '2026-07-12',
+            'estado_credito' => 'cancelado',
+            'metodo_pago' => 'punto',
+            'total_bs' => 4000,
+            'total_usd' => 80,
+            'pago_bs' => 7000,
+        ]);
+
+        // Día del cobro: la fila existe y los KPIs lo suman.
+        $hoy = $this->get('/reportes/facturas?desde=2026-07-12&hasta=2026-07-12');
+        $hoy->assertStatus(200);
+        $this->assertCount(1, $hoy->viewData('facturas'));
+        $this->assertEquals(1, $hoy->viewData('kpis')['cantidad']);
+        $this->assertEquals(7000.0, $hoy->viewData('kpis')['total_bs']);
+        $this->assertEquals(7000.0, $hoy->viewData('desglose')['punto']);
+
+        // Día de la emisión: la fila sigue viéndose, pero todavía no es ingreso.
+        $emision = $this->get('/reportes/facturas?desde=2026-07-11&hasta=2026-07-11');
+        $emision->assertStatus(200);
+        $this->assertCount(1, $emision->viewData('facturas'));
+        $this->assertEquals(0, $emision->viewData('kpis')['cantidad']);
+        $this->assertEquals(0.0, $emision->viewData('kpis')['total_bs']);
+    }
+
     public function test_credito_cobrado_cuenta_como_ingreso_en_fecha_del_cobro()
     {
         $this->actingAs($this->cajero);

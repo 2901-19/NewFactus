@@ -62,10 +62,11 @@ class Factura extends Model
      * - facturas normales (no anuladas, no a crédito) por su fecha_venta y total_bs/total_usd.
      * - créditos ya cobrados por su fecha_pago y pago_bs/total_usd.
      * Los créditos pendientes no son ingreso todavía y se excluyen.
+     * $estado (contado/credito) acota las dos ramas.
      *
      * @return Collection<int, Factura>
      */
-    public static function ingresosEn(string $desde, string $hasta, ?int $clienteId = null, ?string $metodoPago = null): Collection
+    public static function ingresosEn(string $desde, string $hasta, ?int $clienteId = null, ?string $metodoPago = null, ?string $estado = null): Collection
     {
         $normales = static::with('cliente', 'user')
             ->where('estado', '!=', 'anulada')
@@ -74,6 +75,7 @@ class Factura extends Model
             ->whereDate('fecha_venta', '<=', $hasta)
             ->when($clienteId, fn ($q) => $q->where('cliente_id', $clienteId))
             ->when($metodoPago, fn ($q) => $q->where('metodo_pago', $metodoPago))
+            ->when($estado, fn ($q) => $q->where('estado', $estado))
             ->get()
             ->each(function (Factura $f) {
                 $f->fecha_ingreso = $f->fecha_venta?->format('Y-m-d');
@@ -89,6 +91,7 @@ class Factura extends Model
             ->whereDate('fecha_pago', '<=', $hasta)
             ->when($clienteId, fn ($q) => $q->where('cliente_id', $clienteId))
             ->when($metodoPago, fn ($q) => $q->where('metodo_pago', $metodoPago))
+            ->when($estado, fn ($q) => $q->where('estado', $estado))
             ->get()
             ->each(function (Factura $f) {
                 $f->fecha_ingreso = $f->fecha_pago?->format('Y-m-d');

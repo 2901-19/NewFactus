@@ -19,12 +19,13 @@
                 <select name="metodo_pago" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     @foreach ($nombresMetodo as $valor => $nombre)
+                        @if ($valor === 'credito') @continue @endif
                         <option value="{{ $valor }}" {{ request('metodo_pago') == $valor ? 'selected' : '' }}>{{ $nombre }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-6 col-md-4 col-xl">
-                <label class="form-label small text-muted fw-semibold">Estado</label>
+                <label class="form-label small text-muted fw-semibold">Tipo</label>
                 <select name="estado" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     <option value="contado" {{ request('estado') == 'contado' ? 'selected' : '' }}>Contado</option>

@@ -28,7 +28,7 @@ class ReporteController extends Controller
         $kpis = $this->kpis($request, $desde, $hasta);
 
         $desglose = $this->desgloseMetodo(
-            Factura::ingresosEn($desde, $hasta, $request->cliente_id)
+            Factura::ingresosEn($desde, $hasta, $request->cliente_id, $request->metodo_pago, $request->estado)
         );
 
         if ($request->get('export') === 'pdf') {
@@ -154,8 +154,19 @@ class ReporteController extends Controller
     {
         return Factura::with('cliente', 'user')
             ->where('estado', '!=', 'anulada')
-            ->whereDate('fecha_venta', '>=', $desde)
-            ->whereDate('fecha_venta', '<=', $hasta)
+            // Un crédito cobrado entra en el rango por fecha_pago además de fecha_venta,
+            // para que la fila exista el mismo día en que ingresosEn() lo suma.
+            ->where(function ($q) use ($desde, $hasta) {
+                $q->where(function ($r) use ($desde, $hasta) {
+                    $r->whereDate('fecha_venta', '>=', $desde)->whereDate('fecha_venta', '<=', $hasta);
+                })->orWhere(function ($r) use ($desde, $hasta) {
+                    $r->where('estado', 'credito')
+                        ->where('estado_credito', 'cancelado')
+                        ->whereNotNull('fecha_pago')
+                        ->whereDate('fecha_pago', '>=', $desde)
+                        ->whereDate('fecha_pago', '<=', $hasta);
+                });
+            })
             ->when($conMetodo && $request->filled('metodo_pago'), fn ($q) => $q->where('metodo_pago', $request->metodo_pago))
             ->when($request->filled('estado'), fn ($q) => $q->where('estado', $request->estado))
             ->when($request->filled('cliente_id'), fn ($q) => $q->where('cliente_id', $request->cliente_id));
@@ -163,7 +174,7 @@ class ReporteController extends Controller
 
     private function kpis(Request $request, string $desde, string $hasta): array
     {
-        $facturas = Factura::ingresosEn($desde, $hasta, $request->cliente_id, $request->metodo_pago);
+        $facturas = Factura::ingresosEn($desde, $hasta, $request->cliente_id, $request->metodo_pago, $request->estado);
 
         $cantidad = $facturas->count();
         $totalBs = round($facturas->sum('ingreso_bs'), 2);
