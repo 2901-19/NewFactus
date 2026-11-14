@@ -8,6 +8,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
+    {{-- Estado guardado del sidebar: se aplica antes de pintar para evitar parpadeo en escritorio --}}
+    <script>
+        try {
+            if (localStorage.getItem('sidebarEstado') === 'cerrado' && window.innerWidth >= 992) {
+                document.body.classList.add('sidebar-collapsed');
+            }
+        } catch (e) { /* sin storage: queda el estado default */ }
+    </script>
     {{-- Flash messages ocultos para SweetAlert2 --}}
     @if (session('success'))
         <input type="hidden" id="flash-success" value="{{ session('success') }}">
@@ -104,10 +112,22 @@
         if (window.innerWidth < 992) {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebarOverlay').classList.toggle('show');
+            guardarSidebarEstado(document.getElementById('sidebar').classList.contains('open') ? 'abierto' : 'cerrado');
         } else {
             document.body.classList.toggle('sidebar-collapsed');
+            guardarSidebarEstado(document.body.classList.contains('sidebar-collapsed') ? 'cerrado' : 'abierto');
         }
     }
+    function guardarSidebarEstado(estado) {
+        try { localStorage.setItem('sidebarEstado', estado); } catch (e) { /* sin storage */ }
+    }
+    // Móvil arranca cerrado: reabrir si quedó abierto (en escritorio ya se aplicó antes de pintar).
+    try {
+        if (localStorage.getItem('sidebarEstado') === 'abierto' && window.innerWidth < 992) {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sidebarOverlay').classList.add('show');
+        }
+    } catch (e) { /* sin storage: queda el estado default */ }
     </script>
     @stack('scripts')
 </body>
