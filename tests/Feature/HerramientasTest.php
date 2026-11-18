@@ -442,6 +442,23 @@ class HerramientasTest extends TestCase
         $response->assertSessionHasErrors('error');
     }
 
+    public function test_imprimir_precio_ajax_sin_tasa_devuelve_json()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Harina']);
+        $presentacion = ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'precio_usd' => 3.00,
+            'fuente_tasa' => 'usdt',
+        ]);
+        TasaCambio::factory()->create(['tipo' => 'promedio', 'monto' => 60.00]);
+        $this->actingAs($this->admin);
+
+        $response = $this->getJson('/herramientas/precios/imprimir?producto_id='.$producto->id.'&presentacion_id='.$presentacion->id);
+
+        $response->assertStatus(422)->assertJson(['success' => false]);
+    }
+
     public function test_importar_tasas_repetidas_conserva_historial()
     {
         $this->actingAs($this->admin);

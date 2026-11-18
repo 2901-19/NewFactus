@@ -497,18 +497,23 @@ class HerramientasController extends Controller
             'presentacion_id' => 'required|exists:producto_presentaciones,id',
         ]);
 
+        $esJson = $request->expectsJson();
+        $responder = fn (bool $ok, string $mensaje) => $esJson
+            ? response()->json(['success' => $ok, 'message' => $mensaje], $ok ? 200 : 422)
+            : ($ok ? back()->with('success', $mensaje) : back()->withErrors(['error' => $mensaje]));
+
         $producto = Producto::with('presentaciones')->findOrFail($data['producto_id']);
         $presentacion = $producto->presentaciones->firstWhere('id', (int) $data['presentacion_id']);
 
         if (! $presentacion) {
-            return back()->withErrors(['error' => 'La presentación seleccionada no pertenece a este producto.']);
+            return $responder(false, 'La presentación seleccionada no pertenece a este producto.');
         }
 
         $montos = TasaCambio::mapaMontos();
         $tasa = $montos[$presentacion->fuente_tasa] ?? null;
 
         if (! $tasa) {
-            return back()->withErrors(['error' => "La presentación '{$presentacion->nombre}' no tiene la tasa de cambio '{$presentacion->fuente_tasa}' configurada. Configure la tasa en Tasas de Cambio."]);
+            return $responder(false, "La presentación '{$presentacion->nombre}' no tiene la tasa de cambio '{$presentacion->fuente_tasa}' configurada. Configure la tasa en Tasas de Cambio.");
         }
 
         $config = $this->getPrinterConfig();
@@ -516,7 +521,7 @@ class HerramientasController extends Controller
         $ok = $service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre']);
 
         if (! $ok) {
-            return back()->withErrors(['error' => 'No se pudo conectar a la impresora.']);
+            return $responder(false, 'No se pudo conectar a la impresora.');
         }
 
         $ok = $service->printPrecioProducto([
@@ -526,10 +531,10 @@ class HerramientasController extends Controller
         ]);
 
         if (! $ok) {
-            return back()->withErrors(['error' => 'Error al imprimir la etiqueta de precio.']);
+            return $responder(false, 'Error al imprimir la etiqueta de precio.');
         }
 
-        return back()->with('success', 'Etiqueta de precio impresa correctamente.');
+        return $responder(true, 'Etiqueta de precio impresa correctamente.');
     }
 
     // ========== PDF LISTA DE PRECIOS ==========
@@ -546,25 +551,31 @@ class HerramientasController extends Controller
         $tasas = TasaCambio::mapaMontos();
 
         if ($request->query('export') === 'json') {
-            $data = $productos->map(fn ($p) => [
-                'nombre' => $p->nombre,
-                'costo_usd' => $p->costo_usd,
-                'impuesto' => $p->impuesto?->nombre,
-                'presentaciones' => $p->presentaciones
-                    ->where('activa', true)
-                    ->when(! empty($filtro), fn ($col) => $col->whereIn('nombre', $filtro))
-                    ->map(fn ($pr) => [
-                        'nombre' => $pr->nombre,
-                        'factor_conversion' => $pr->factor_conversion,
-                        'margen' => $pr->margen,
-                        'precio_usd' => $pr->precio_usd,
-                        'fuente_tasa' => $pr->fuente_tasa,
-                        'precio_bs' => round($pr->precio_usd * ($tasas[$pr->fuente_tasa] ?? 1), 2),
-                        'activa' => $pr->activa,
-                    ])->values(),
-            ]);
+            try {
+                $data = $productos->map(fn ($p) => [
+                    'nombre' => $p->nombre,
+                    'costo_usd' => $p->costo_usd,
+                    'impuesto' => $p->impuesto?->nombre,
+                    'presentaciones' => $p->presentaciones
+                        ->where('activa', true)
+                        ->when(! empty($filtro), fn ($col) => $col->whereIn('nombre', $filtro))
+                        ->map(fn ($pr) => [
+                            'nombre' => $pr->nombre,
+                            'factor_conversion' => $pr->factor_conversion,
+                            'margen' => $pr->margen,
+                            'precio_usd' => $pr->precio_usd,
+                            'fuente_tasa' => $pr->fuente_tasa,
+                            'precio_bs' => round($pr->precio_usd * ($tasas[$pr->fuente_tasa] ?? 1), 2),
+                            'activa' => $pr->activa,
+                        ])->values(),
+                ]);
 
-            return response()->json($data);
+                return response()->json($data);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return redirect()->route('herramientas.precios')->withErrors(['error' => 'No se pudo generar el JSON de la lista de precios.']);
+            }
         }
 
         $presentacionesOpciones = $opciones;
@@ -587,14 +598,24 @@ class HerramientasController extends Controller
 
         $sufijo = ($categoria ? '_'.Str::slug($categoria->nombre) : '')
             .($filtro ? '_'.Str::slug(implode('_', $filtro)) : '');
-        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha', 'categoria', 'filtro'));
-        $pdf->setPaper('letter', 'portrait');
 
-        return $pdf->download('lista_precios'.$sufijo.'_'.now()->format('Y_m_d').'.pdf');
+        try {
+            $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha', 'categoria', 'filtro'));
+            $pdf->setPaper('letter', 'portrait');
+
+            return $pdf->download('lista_precios'.$sufijo.'_'.now()->format('Y_m_d').'.pdf');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('herramientas.precios')->withErrors(['error' => 'No se pudo generar el PDF de la lista de precios.']);
+        }
     }
 
     private function productosParaPrecios(int $categoriaId)
     {
+        ini_set('memory_limit', '1G');
+        set_time_limit(0);
+
         return Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
             ->when($categoriaId, fn ($q) => $q->where('categoria_id', $categoriaId))

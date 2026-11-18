@@ -63,9 +63,11 @@
                 <td>{{ $p->impuesto?->nombre ?? 'No' }}</td>
                 <td class="text-center">
                     @if ($tasaDisponible)
-                    <a href="{{ route('herramientas.precios.imprimir', ['producto_id' => $p->id, 'presentacion_id' => $pr->id]) }}" class="btn btn-sm btn-outline-primary" title="Imprimir etiqueta de precio">
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-imprimir-etiqueta"
+                        data-url="{{ route('herramientas.precios.imprimir', ['producto_id' => $p->id, 'presentacion_id' => $pr->id]) }}"
+                        title="Imprimir etiqueta de precio">
                         <i class="bi bi-printer"></i>
-                    </a>
+                    </button>
                     @else
                     <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Configure la tasa '{{ $pr->fuente_tasa }}' para imprimir la etiqueta">
                         <i class="bi bi-printer"></i>
@@ -96,6 +98,20 @@ document.addEventListener('DOMContentLoaded', function () {
             url.searchParams.delete('categoria_id');
         }
         window.location.href = url.toString();
+    });
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-imprimir-etiqueta');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+        fetch(btn.dataset.url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then((r) => r.json().then((body) => ({ ok: r.ok, body })))
+            .then(({ ok, body }) => window.Toast.fire({
+                icon: ok ? 'success' : 'error',
+                title: body.message || (ok ? 'Etiqueta impresa' : 'Error al imprimir'),
+            }))
+            .catch(() => window.Toast.fire({ icon: 'error', title: 'Error de conexión al imprimir' }))
+            .finally(() => { btn.disabled = false; });
     });
 });
 </script>

@@ -42,6 +42,7 @@ el lanzador de un clic listo para empezar a facturar.
      `extension=mbstring`, `extension=openssl`, `extension=pdo_pgsql`, `extension=pgsql`,
      `extension=sqlite3`, `extension=zip`
    - `date.timezone = America/Caracas`
+   - `memory_limit = 512M` (necesario para exportar/descargar la lista de precios con catálogos grandes)
 5. Agregar `C:\php` al **PATH del sistema** (Panel de control → Sistema → Configuración avanzada →
    Variables de entorno → `Path` del sistema → Nuevo → `C:\php`). En PowerShell como administrador:
    ```powershell
