@@ -1323,4 +1323,88 @@ class FacturaControllerTest extends TestCase
         $this->producto->refresh();
         $this->assertEquals(124, (float) $this->producto->stock_actual);
     }
+
+    public function test_store_indica_auto_imprimir_segun_configuracion()
+    {
+        $this->actingAs($this->cajero);
+
+        $payload = [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData(['cantidad' => 1])],
+        ];
+
+        $this->postJson('/facturas', $payload)->assertJson([
+            'success' => true,
+            'auto_imprimir' => false,
+        ]);
+
+        Configuracion::updateOrCreate(['clave' => 'imprimir_al_facturar'], ['valor' => '1']);
+        Configuracion::olvidar('imprimir_al_facturar');
+
+        $payload['items'][0]['cantidad'] = 2;
+        $this->postJson('/facturas', $payload)->assertJson([
+            'success' => true,
+            'auto_imprimir' => true,
+        ]);
+    }
+
+    public function test_reintento_idempotente_no_solicita_auto_impresion()
+    {
+        $this->actingAs($this->cajero);
+        Configuracion::updateOrCreate(['clave' => 'imprimir_al_facturar'], ['valor' => '1']);
+        Configuracion::olvidar('imprimir_al_facturar');
+
+        $payload = [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'idempotencia_key' => '44444444-4444-4444-8444-444444444444',
+            'items' => [$this->crearItemData(['cantidad' => 1])],
+        ];
+
+        $this->postJson('/facturas', $payload)->assertJson([
+            'success' => true,
+            'auto_imprimir' => true,
+        ]);
+
+        $this->postJson('/facturas', $payload)->assertJson([
+            'success' => true,
+            'auto_imprimir' => false,
+        ]);
+    }
+
+    public function test_imprimir_factura_devuelve_estado_sin_impresora()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ])->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+
+        $path = storage_path('app/impresora.json');
+        $previo = file_exists($path) ? file_get_contents($path) : null;
+        file_put_contents($path, json_encode(['tipo' => 'windows', 'host' => '', 'port' => 9100, 'nombre' => '']));
+
+        try {
+            $response = $this->postJson("/facturas/{$factura->id}/imprimir");
+
+            $response->assertOk()->assertJson([
+                'impreso' => false,
+                'error' => 'no_impreso',
+            ]);
+        } finally {
+            if ($previo === null) {
+                @unlink($path);
+            } else {
+                file_put_contents($path, $previo);
+            }
+        }
+    }
 }

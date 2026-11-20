@@ -111,7 +111,7 @@ Si PHP no puede acceder a la impresora, es un problema de permisos.
 2. Seleccionar productos, definir cantidades.
 3. Agregar un cliente o elegir uno existente.
 4. Pulsa **"Cobrar / Facturar"**.
-5. La factura se **imprime automaticamente** al guardarse si el interruptor "Imprimir ticket automaticamente al facturar" esta activo (Herramientas → Configuracion Impresora, activo por defecto). Si la impresora falla, la venta **no se pierde**: se guarda igual y el POS muestra un aviso rojo ambar.
+5. La venta se guarda al instante y el cajero puede seguir trabajando. Si el interruptor "Imprimir ticket automaticamente al facturar" esta activo (Herramientas → Configuracion Impresora, activo por defecto), el POS envía el ticket a imprimir en segundo plano. Si la impresora falla, la venta **no se pierde**: se conserva y el POS muestra un aviso.
 6. En la factura registrada, el boton **"Imprimir Ticket"** permite reimprimir en cualquier momento.
 7. El recibo imprime: nombre del negocio, correlativo, fecha, cajero, productos (4 columnas justificadas: descripcion, cant, precio USD, precio Bs), totales en Bs/USD, leyenda de credito si aplica, y corte parcial al final. Todos los montos van con formato español (`1.234,56`).
 
@@ -125,6 +125,7 @@ Si PHP no puede acceder a la impresora, es un problema de permisos.
 | Imprime letra ilegible / basura | Driver generico equivocado | Reinstalar driver oficial del modelo exacto |
 | Imprime en blanco | Cable USB flojo o papel al revés | Reasentar cable, voltear el rollo (cara termica contra el cabezal) |
 | Imprime muy lento / letra por letra | Driver en modo spool | Propiedades de impresora → Avanzado → desmarcar "Spool" / elegir "Imprimir directamente" |
+| El ticket sale pero tarda en "terminar" (USB) | El spooler de Windows (conector `windows`) retiene el trabajo al cerrar/cortar | Instalar la impresora con driver **"Generic / Text Only"** para envío directo; si la impresora tiene Ethernet/WiFi, preferir conexión **`network` (TCP 9100)** por IP directa |
 | Test dice "Exito" pero factura no imprime | Se imprime sobre la seleccion actual | Imprimir despues de guardar la factura (paso 7) |
 | "Acceso denegado" en el log | Falta permiso de impresion | Repetir paso 4 |
 | Sale un cuadrado negro despues del texto | Falta papel o rollo al revés | Colocar nuevo rollo, verificar orientacion |
@@ -161,5 +162,5 @@ Si aparece → todo esta bien configurado en Windows.
 - **Diseno del ticket**: 48 celdas de ancho (80 mm). Las columnas de productos son dinamicas por fila: `Descripcion = 48 - Cant - PrecioUSD - PrecioBS` (minimo 12 celdas); el nombre se envuelve por palabras y los precios quedan alineados a la derecha en todo momento. Los totales se imprimen a tamano doble (24 celdas) en una sola linea, con fallback a `(1,2)` si el monto es muy largo.
 - **Codificacion**: todo texto del usuario (nombres de producto, cliente, negocio) pasa por `Str::ascii()` antes de imprimirse: 1 caracter = 1 celda, sin desbordes ni saltos de posicion. Lo que se ve con caracteres "raros" es la transliteracion (ej: `ñ` → `n`, `á` → `a`), necesaria para que las columnas cuadren.
 - Los montos del ticket se imprimen con formato español (`1.234,56`).
-- Impresion automatica: la imprime `FacturaController::store()` despues de confirmar la factura en la BD (`imprimir_al_facturar` en `Configuracion`, toggle en Herramientas → Configuracion Impresora). Si no hay impresora configurada o falla, responde con `impreso=false` y el POS muestra un aviso sin afectar la venta.
+- Impresion automatica: al confirmar la venta, `FacturaController::store()` guarda la factura y responde al instante con `auto_imprimir`. Si está activo (`imprimir_al_facturar` en `Configuracion`), el POS dispara `POST /facturas/{factura}/imprimir` en segundo plano; si falla, muestra un aviso sin afectar la venta (el ticket puede reimprimirse desde Facturas). En USB el spooler de Windows puede tardar en cerrar el trabajo aunque el papel ya haya salido; para reducirlo use driver "Generic / Text Only" o, si es posible, conexión `network` (TCP 9100).
 - Etiqueta de precio: sin nombre del negocio; producto en negrita tamano 2x centrado (max 24 celdas por linea, se envuelve) y el precio `Bs X` en tamano adaptativo (`4x4` si ≤ 12 caracteres, luego `3x3`, `2x2`, `1x1`), siempre centrado y completo.

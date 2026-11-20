@@ -329,8 +329,7 @@ class FacturaController extends Controller
                     'success' => true,
                     'correlativo' => $existente->correlativo,
                     'factura_id' => $existente->id,
-                    'impreso' => true,
-                    'impresion_error' => null,
+                    'auto_imprimir' => false,
                 ]);
             }
         }
@@ -476,8 +475,7 @@ class FacturaController extends Controller
                         'success' => true,
                         'correlativo' => $existente->correlativo,
                         'factura_id' => $existente->id,
-                        'impreso' => true,
-                        'impresion_error' => null,
+                        'auto_imprimir' => false,
                     ]);
                 }
 
@@ -486,36 +484,13 @@ class FacturaController extends Controller
 
             DB::commit();
 
-            $impreso = false;
-            $errorImpresion = null;
-
-            if ((string) Configuracion::obtener('imprimir_al_facturar', '1') === '1') {
-                try {
-                    $configPrinter = PrinterService::configuracion();
-                    $service = new PrinterService;
-                    if ($service->connect($configPrinter['tipo'], $configPrinter['host'], $configPrinter['port'], $configPrinter['nombre'])) {
-                        $factura->load('items.producto');
-                        $impreso = $service->printReceipt($factura, PrinterService::itemsDesdeFactura($factura), auth()->user()->usuario);
-                    }
-
-                    if (! $impreso) {
-                        $errorImpresion = 'no_impreso';
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Impresión automática de factura falló', [
-                        'factura_id' => $factura->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                    $errorImpresion = 'no_impreso';
-                }
-            }
+            $autoImprimir = (string) Configuracion::obtener('imprimir_al_facturar', '1') === '1';
 
             return response()->json([
                 'success' => true,
                 'correlativo' => $correlativo,
                 'factura_id' => $factura->id,
-                'impreso' => $impreso,
-                'impresion_error' => $errorImpresion,
+                'auto_imprimir' => $autoImprimir,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -535,6 +510,35 @@ class FacturaController extends Controller
         $tasaVigente = $tasaReferencia ? (float) $tasaReferencia->monto : null;
 
         return view('facturas.creditos', compact('facturas', 'tasaVigente'));
+    }
+
+    public function imprimir(Factura $factura)
+    {
+        try {
+            $factura->load('cliente', 'items.producto');
+            $config = PrinterService::configuracion();
+            $service = new PrinterService;
+            $impreso = false;
+
+            if ($service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre'])) {
+                $impreso = $service->printReceipt($factura, PrinterService::itemsDesdeFactura($factura), auth()->user()->usuario);
+            }
+
+            return response()->json([
+                'impreso' => (bool) $impreso,
+                'error' => $impreso ? null : 'no_impreso',
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Impresión de factura falló', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'impreso' => false,
+                'error' => 'no_impreso',
+            ]);
+        }
     }
 
     public function show(Factura $factura)

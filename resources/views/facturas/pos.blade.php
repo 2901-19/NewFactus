@@ -1032,6 +1032,14 @@ document.addEventListener('alpine:init', () => {
                 cantidad: i.cantidad,
             }));
 
+            let liberado = false;
+            const liberar = () => {
+                if (!liberado) {
+                    this.cargando = false;
+                    liberado = true;
+                }
+            };
+
             try {
                 const res = await fetch('{{ route("facturas.store") }}', {
                     method: 'POST',
@@ -1060,21 +1068,40 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    if (data.impreso === false) {
-                        this.mostrarAviso('Factura N° ' + data.correlativo + ' generada, pero no se imprimió el ticket. Revise la impresora.');
-                    } else {
-                        this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
-                    }
+                    this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
                     this.pestanas.splice(this.pestanaActiva, 1);
                     if (this.pestanas.length === 0) this.nuevaVenta();
                     else if (this.pestanaActiva >= this.pestanas.length) this.pestanaActiva = this.pestanas.length - 1;
+                    liberar();
+
+                    if (data.auto_imprimir && data.factura_id) {
+                        this.imprimirFacturaAsync(data.factura_id, data.correlativo);
+                    }
                 } else {
+                    liberar();
                     this.mostrarError('Error: ' + data.message);
                 }
             } catch (e) {
+                liberar();
                 this.mostrarError('Error al conectar con el servidor.');
-            } finally {
-                this.cargando = false;
+            }
+        },
+
+        async imprimirFacturaAsync(facturaId, correlativo) {
+            try {
+                const res = await fetch('/facturas/' + facturaId + '/imprimir', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+                const data = await res.json();
+                if (!data.impreso) {
+                    this.mostrarAviso('Factura N° ' + correlativo + ' generada, pero no se imprimió el ticket. Revise la impresora.');
+                }
+            } catch (e) {
+                this.mostrarAviso('Factura N° ' + correlativo + ' generada, pero no se imprimió el ticket. Revise la impresora.');
             }
         },
 
