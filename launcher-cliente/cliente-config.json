@@ -1,0 +1,5 @@
+{
+    "servidor": "FACTUS-SERVIDOR",
+    "port": 8000,
+    "browser": "auto"
+}

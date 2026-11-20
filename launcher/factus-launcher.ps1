@@ -8,6 +8,8 @@
 #   - Verifica que PostgreSQL este encendida antes de arrancar.
 #   - Vigila el servidor: si PHP muere con la ventana abierta, lo reinicia
 #     con reintentos y refresca la ventana en su lugar (sin recargarla).
+#   - Arranca con varios workers (PHP_CLI_SERVER_WORKERS) para no bloquear
+#     al resto de PCs mientras se atiende una peticion pesada.
 # Si una instancia anterior quedo huerfana (cierre forzado), la limpia al
 # iniciar para que el puerto nunca quede bloqueado.
 
@@ -16,15 +18,16 @@ $ErrorActionPreference = 'Stop'
 $base = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configPath = Join-Path $base 'config.json'
 
-$config = @{ port = 8000; host = '0.0.0.0'; phpPath = $null; appPath = $null; browser = 'auto'; postgresPort = 5432 }
+$config = @{ port = 8000; host = '0.0.0.0'; phpPath = $null; appPath = $null; browser = 'auto'; postgresPort = 5432; serverWorkers = 2 }
 if (Test-Path $configPath) {
     $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
-    if ($cfg.port)         { $config.port         = [int]$cfg.port }
-    if ($cfg.host)         { $config.host         = [string]$cfg.host }
-    if ($cfg.phpPath)      { $config.phpPath      = [string]$cfg.phpPath }
-    if ($cfg.appPath)      { $config.appPath      = [string]$cfg.appPath }
-    if ($cfg.browser)      { $config.browser      = [string]$cfg.browser }
-    if ($cfg.postgresPort) { $config.postgresPort = [int]$cfg.postgresPort }
+    if ($cfg.port)          { $config.port          = [int]$cfg.port }
+    if ($cfg.host)          { $config.host          = [string]$cfg.host }
+    if ($cfg.phpPath)       { $config.phpPath       = [string]$cfg.phpPath }
+    if ($cfg.appPath)       { $config.appPath       = [string]$cfg.appPath }
+    if ($cfg.browser)       { $config.browser       = [string]$cfg.browser }
+    if ($cfg.postgresPort)  { $config.postgresPort  = [int]$cfg.postgresPort }
+    if ($cfg.serverWorkers) { $config.serverWorkers = [int]$cfg.serverWorkers }
 }
 
 $port = $config.port
@@ -133,10 +136,13 @@ function Recargar-Ventana([int]$id) {
 }
 
 # Arranca `php artisan serve` y espera a que responda. Devuelve el proceso.
+# PHP_CLI_SERVER_WORKERS permite atender varias peticiones a la vez (evita que
+# una peticion pesada, como el PDF de la lista de precios, congele a las demas PCs).
 function Iniciar-Servidor() {
     $php = Localizar-Php
     if (-not $php) { throw 'No se encontro PHP. Instala PHP 8.2+ y vuelve a abrir FACTUS.' }
 
+    $env:PHP_CLI_SERVER_WORKERS = [string]$config.serverWorkers
     $proc = Start-Process -FilePath $php -ArgumentList @('artisan', 'serve', "--host=$hostServe", "--port=$port") -WorkingDirectory $appDir -WindowStyle Hidden -PassThru
     Set-Content -Path $pidFile -Value $proc.Id
 
