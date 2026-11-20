@@ -29,42 +29,70 @@
 
     <div class="col-md-5">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-cart"></i> Carrito</span>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-secondary" x-text="carrito.length + ' items'"></span>
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0" @click="vaciarCarrito" :disabled="carrito.length === 0" title="Vaciar carrito">
-                        <i class="bi bi-trash"></i>
+            <div class="card-header py-2">
+                <div class="d-flex align-items-center gap-1 mb-2" style="min-width: 0;">
+                    <template x-for="(v, i) in pestanas" :key="v.id">
+                        <div class="btn-group btn-group-sm flex-fill" style="min-width: 0;">
+                            <button type="button" class="btn text-truncate px-1"
+                                :class="i === pestanaActiva ? 'btn-primary' : 'btn-outline-secondary'"
+                                @click="activarPestana(i)" :title="'Fra ' + (i + 1)">
+                                <span x-text="'Fra ' + (i + 1)"></span>
+                            </button>
+                            <button type="button" class="btn px-1"
+                                :class="i === pestanaActiva ? 'btn-outline-danger' : 'btn-outline-secondary'"
+                                @click.stop="cerrarPestana(i)" title="Cerrar pestaña">&times;</button>
+                        </div>
+                    </template>
+                    <button type="button" class="btn btn-sm btn-outline-success flex-shrink-0"
+                            @click="nuevaVenta" :disabled="pestanas.length >= 3" title="Nueva pestaña">
+                        <i class="bi bi-plus-lg"></i>
                     </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-cart"></i> Carrito</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary" x-text="carrito.length + ' items'"></span>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0" @click="vaciarCarrito" :disabled="carrito.length === 0" title="Vaciar carrito">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body p-2">
-                <template x-for="(item, index) in carrito" :key="index">
-                    <div class="border-bottom pb-2 mb-2">
-                        <div class="d-flex justify-content-between">
-                            <strong class="small" x-text="item.nombre"></strong>
+                <template x-for="(item, index) in carrito" :key="item.id + '-' + item.presentacion_id + '-' + index">
+                    <div class="border-bottom pb-2 mb-2" :class="item.invalido ? 'bg-danger bg-opacity-10 rounded px-1' : ''">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-1">
+                                <strong class="small" x-text="item.nombre"></strong>
+                                <span x-show="item.invalido" class="badge bg-danger">No disponible</span>
+                            </div>
                             <button class="btn btn-sm btn-outline-danger py-0" @click="carrito.splice(index, 1)">&times;</button>
                         </div>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                            <template x-if="item.controla_inventario">
-                                <div class="d-flex align-items-center gap-2">
-                                    <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.max(1, item.cantidad - 1)">-</button>
-                                    <input type="number" step="1" min="1" :max="maxPresentaciones(index)" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(1, Math.min(parseFloat(item.cantidad) || 1, maxPresentaciones(index)))" class="form-control form-control-sm text-center" style="width: 70px;">
-                                    <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.min((parseFloat(item.cantidad) || 0) + 1, maxPresentaciones(index))" :disabled="item.cantidad >= maxPresentaciones(index)">+</button>
+                        <template x-if="!item.invalido">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <template x-if="item.controla_inventario">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.max(1, item.cantidad - 1)">-</button>
+                                            <input type="number" step="1" min="1" :max="maxPresentaciones(index)" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(1, Math.min(parseFloat(item.cantidad) || 1, maxPresentaciones(index)))" class="form-control form-control-sm text-center" style="width: 70px;">
+                                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.min((parseFloat(item.cantidad) || 0) + 1, maxPresentaciones(index))" :disabled="item.cantidad >= maxPresentaciones(index)">+</button>
+                                        </div>
+                                    </template>
+                                    <template x-if="!item.controla_inventario">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="input-group input-group-sm" style="width: 160px;">
+                                                <span class="input-group-text">Bs</span>
+                                                <input type="number" step="0.01" min="0.01" x-model.number="item.montoBs" @input="sincronizarPeso(index)" @blur="sincronizarPeso(index)" class="form-control text-center" placeholder="Monto">
+                                            </div>
+                                            <span class="small text-muted text-nowrap" x-text="'≈ ' + pesoReferencia(index)"></span>
+                                        </div>
+                                    </template>
+                                    <span class="ms-auto small" x-text="'Bs ' + fmtMoneda(getBsPriceTotal(index))"></span>
                                 </div>
-                            </template>
-                            <template x-if="!item.controla_inventario">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="input-group input-group-sm" style="width: 160px;">
-                                        <span class="input-group-text">Bs</span>
-                                        <input type="number" step="0.01" min="0.01" x-model.number="item.montoBs" @input="sincronizarPeso(index)" @blur="sincronizarPeso(index)" class="form-control text-center" placeholder="Monto">
-                                    </div>
-                                    <span class="small text-muted text-nowrap" x-text="'≈ ' + pesoReferencia(index)"></span>
-                                </div>
-                            </template>
-                            <span class="ms-auto small" x-text="'Bs ' + fmtMoneda(getBsPriceTotal(index))"></span>
-                        </div>
-                        <div class="text-muted small" x-show="factorDe(item) !== 1 && factorDe(item) > 0" x-text="descripcionPresentacion(index)"></div>
+                                <div class="text-muted small" x-show="factorDe(item) !== 1 && factorDe(item) > 0" x-text="descripcionPresentacion(index)"></div>
+                            </div>
+                        </template>
+                        <div x-show="item.invalido" class="small text-danger mt-1">Producto o presentación no disponible. Quítelo para facturar.</div>
                     </div>
                 </template>
                 <div class="text-center text-muted small py-3" x-show="carrito.length === 0">
@@ -185,10 +213,13 @@
                     <span>Total USD:</span>
                     <span x-text="'$' + fmtMoneda(totalUsdRef)"></span>
                 </div>
+                <div x-show="tieneItemsInvalidos" class="small text-danger mt-2">
+                    <i class="bi bi-exclamation-triangle"></i> Hay productos no disponibles. Quítelos para facturar.
+                </div>
                 <div x-show="pesablesIncompletos" class="small text-danger mt-2">
                     <i class="bi bi-exclamation-triangle"></i> Complete el monto en Bs de los productos pesables.
                 </div>
-                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || (metodoPago === 'mixto' && !pagosValidos) || pesablesIncompletos || cargando">
+                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || tieneItemsInvalidos || (tipoFactura === 'credito' && !clienteId) || (metodoPago === 'mixto' && !pagosValidos) || pesablesIncompletos || cargando">
                     <span x-show="!cargando"><i class="bi bi-check-lg"></i> Generar Factura</span>
                     <span x-show="cargando"><span class="spinner-border spinner-border-sm"></span> Procesando...</span>
                 </button>
@@ -383,20 +414,36 @@ document.addEventListener('alpine:init', () => {
         tasas: @json($tasas),
         tasaReferencia: '{{ $tasaReferenciaTipo }}',
         permitirVentaSinStock: {{ $permitirVentaSinStock ? 'true' : 'false' }},
-        carrito: [],
-        metodoPago: 'efectivo',
-        datosPago: { referencia: '', telefono: '' },
-        tipoFactura: 'contado',
-        clienteId: '',
-        pago1: { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' },
-        pago2: { metodo: 'punto', monto: 0, referencia: '', telefono: '' },
+        pestanas: [],
+        pestanaActiva: 0,
         cargando: false,
-        idempotenciaKey: null,
         nuevoCliente: { nombre: '', ci: '', telefono: '' },
         errorCliente: '',
         guardandoCliente: false,
 
+        get ventaActual() { return this.pestanas[this.pestanaActiva] || this.pestanas[0]; },
+        get carrito() { return this.ventaActual ? this.ventaActual.carrito : []; },
+        set carrito(v) { if (this.ventaActual) this.ventaActual.carrito = v; },
+        get metodoPago() { return this.ventaActual ? this.ventaActual.metodoPago : 'efectivo'; },
+        set metodoPago(v) { if (this.ventaActual) this.ventaActual.metodoPago = v; },
+        get datosPago() { return this.ventaActual ? this.ventaActual.datosPago : { referencia: '', telefono: '' }; },
+        set datosPago(v) { if (this.ventaActual) this.ventaActual.datosPago = v; },
+        get tipoFactura() { return this.ventaActual ? this.ventaActual.tipoFactura : 'contado'; },
+        set tipoFactura(v) { if (this.ventaActual) this.ventaActual.tipoFactura = v; },
+        get clienteId() { return this.ventaActual ? this.ventaActual.clienteId : ''; },
+        set clienteId(v) { if (this.ventaActual) this.ventaActual.clienteId = v; },
+        get pago1() { return this.ventaActual ? this.ventaActual.pago1 : { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' }; },
+        set pago1(v) { if (this.ventaActual) this.ventaActual.pago1 = v; },
+        get pago2() { return this.ventaActual ? this.ventaActual.pago2 : { metodo: 'punto', monto: 0, referencia: '', telefono: '' }; },
+        set pago2(v) { if (this.ventaActual) this.ventaActual.pago2 = v; },
+        get idempotenciaKey() { return this.ventaActual ? this.ventaActual.idempotenciaKey : null; },
+        set idempotenciaKey(v) { if (this.ventaActual) this.ventaActual.idempotenciaKey = v; },
+
         init() {
+            this.restaurar();
+            if (this.pestanas.length === 0) this.nuevaVenta();
+            this.$watch('pestanas', () => this.persistir(), { deep: true });
+
             if ($.fn.DataTable) {
                 this.dataTable = $('#productosTable').DataTable({
                     processing: true,
@@ -481,11 +528,135 @@ document.addEventListener('alpine:init', () => {
                     const input = document.querySelector('.dataTables_filter input');
                     if (input) input.focus();
                 }
-                if (e.key === 'F8' && this.carrito.length > 0) {
+                if (e.key === 'F8' && this.ventaActual && this.ventaActual.carrito.length > 0) {
                     e.preventDefault();
                     this.confirmarFactura();
                 }
             });
+        },
+
+        nuevoId() {
+            return (crypto.randomUUID ? crypto.randomUUID() : 'vta-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+        },
+
+        nuevaVenta() {
+            if (this.pestanas.length >= 3) {
+                this.mostrarError('Límite de 3 ventas en el carrito.');
+                return;
+            }
+            this.pestanas.push({
+                id: this.nuevoId(),
+                carrito: [],
+                metodoPago: 'efectivo',
+                datosPago: { referencia: '', telefono: '' },
+                tipoFactura: 'contado',
+                clienteId: '',
+                pago1: { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' },
+                pago2: { metodo: 'punto', monto: 0, referencia: '', telefono: '' },
+                idempotenciaKey: this.nuevoId(),
+            });
+            this.pestanaActiva = this.pestanas.length - 1;
+        },
+
+        activarPestana(i) {
+            this.pestanaActiva = i;
+        },
+
+        cerrarPestana(i) {
+            const venta = this.pestanas[i];
+            if (!venta) return;
+            const fn = () => {
+                this.pestanas.splice(i, 1);
+                if (this.pestanas.length === 0) this.nuevaVenta();
+                else if (this.pestanaActiva >= this.pestanas.length) this.pestanaActiva = this.pestanas.length - 1;
+            };
+            if (venta.carrito.length === 0) { fn(); return; }
+            Swal.fire({
+                title: '¿Descartar esta venta?',
+                text: 'Se perderán los productos de la pestaña ' + (i + 1) + '.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, descartar',
+                cancelButtonText: 'Cancelar',
+            }).then((r) => { if (r.isConfirmed) fn(); });
+        },
+
+        serializarVenta(v) {
+            return {
+                id: v.id,
+                idempotenciaKey: v.idempotenciaKey,
+                metodoPago: v.metodoPago,
+                datosPago: v.datosPago,
+                tipoFactura: v.tipoFactura,
+                clienteId: v.clienteId,
+                pago1: v.pago1,
+                pago2: v.pago2,
+                carrito: v.carrito.map(it => ({
+                    producto_id: it.id,
+                    presentacion_id: it.presentacion_id,
+                    cantidad: it.cantidad,
+                    montoBs: it.montoBs,
+                })),
+            };
+        },
+
+        persistir() {
+            try {
+                localStorage.setItem('factus_pos_pestanas', JSON.stringify(this.pestanas.map(v => this.serializarVenta(v))));
+            } catch (e) { /* shortcut: sin storage (modo privado/cuota), borradores no persisten */ }
+        },
+
+        restaurar() {
+            let raw;
+            try { raw = localStorage.getItem('factus_pos_pestanas'); } catch (e) { return; }
+            if (!raw) return;
+            let guardado;
+            try { guardado = JSON.parse(raw); } catch (e) { return; }
+            this.pestanas = (Array.isArray(guardado) ? guardado : []).slice(0, 3).map(s => this.rehidratarVenta(s));
+            this.pestanaActiva = 0;
+        },
+
+        rehidratarVenta(s) {
+            const venta = {
+                id: s.id || this.nuevoId(),
+                idempotenciaKey: s.idempotenciaKey || this.nuevoId(),
+                metodoPago: s.metodoPago || 'efectivo',
+                datosPago: s.datosPago || { referencia: '', telefono: '' },
+                tipoFactura: s.tipoFactura || 'contado',
+                clienteId: s.clienteId || '',
+                pago1: s.pago1 || { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' },
+                pago2: s.pago2 || { metodo: 'punto', monto: 0, referencia: '', telefono: '' },
+                carrito: [],
+            };
+            venta.carrito = (s.carrito || []).map(it => this.rehidratarItem(it)).filter(Boolean);
+            return venta;
+        },
+
+        rehidratarItem(it) {
+            const p = this.productos.find(x => x.id === it.producto_id);
+            const pr = p ? (p.presentaciones || []).find(x => x.id === it.presentacion_id) : null;
+            if (!p || !pr) {
+                return { id: it.producto_id, nombre: '(producto no disponible)', invalido: true, cantidad: it.cantidad || 0, controla_inventario: false, montoBs: it.montoBs || '', presentaciones: [], presentacion_id: it.presentacion_id, impuesto: null, fuente_tasa: null };
+            }
+            const tasaFila = this.tasas[pr.fuente_tasa];
+            if (!tasaFila || !(parseFloat(tasaFila.monto) > 0)) {
+                return { id: p.id, nombre: p.nombre, invalido: true, cantidad: it.cantidad || 0, controla_inventario: !!p.controla_inventario, montoBs: it.montoBs || '', presentaciones: p.presentaciones, presentacion_id: pr.id, impuesto: p.impuesto || null, fuente_tasa: pr.fuente_tasa };
+            }
+            return {
+                id: p.id,
+                nombre: p.nombre,
+                cantidad: it.cantidad ?? (p.controla_inventario ? 1 : 0),
+                controla_inventario: !!p.controla_inventario,
+                montoBs: p.controla_inventario ? undefined : (it.montoBs ?? ''),
+                presentaciones: p.presentaciones,
+                presentacion_id: pr.id,
+                impuesto: p.impuesto || null,
+                fuente_tasa: pr.fuente_tasa,
+            };
+        },
+
+        get tieneItemsInvalidos() {
+            return this.carrito.some(i => i.invalido);
         },
 
         agregar(p, presId) {
@@ -511,7 +682,7 @@ document.addEventListener('alpine:init', () => {
                 this.mostrarError('Stock insuficiente para ' + p.nombre + (nombrePres ? ' (' + nombrePres + ')' : '') + '. Disponible: ' + stock + ' ' + unidad + '.');
                 return;
             }
-            const existente = this.carrito.find(i => i.id === p.id && i.presentacion_id === presId);
+            const existente = this.carrito.find(i => i.id === p.id && i.presentacion_id === presId && !i.invalido);
             if (existente) {
                 if (existente.controla_inventario) {
                     existente.cantidad++;
@@ -552,7 +723,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get pesablesIncompletos() {
-            return this.carrito.some(i => !i.controla_inventario && !(parseFloat(i.montoBs) > 0));
+            return this.carrito.some(i => !i.invalido && !i.controla_inventario && !(parseFloat(i.montoBs) > 0));
         },
 
         factorDe(item) {
@@ -562,10 +733,12 @@ document.addEventListener('alpine:init', () => {
 
         unidadesOcupadas(productoId) {
             let total = 0;
-            this.carrito.forEach(it => {
-                if (it.id !== productoId) return;
-                const pr = (it.presentaciones || []).find(pr => pr.id === it.presentacion_id);
-                total += (parseFloat(it.cantidad) || 0) * (pr ? parseFloat(pr.factor_conversion) || 0 : 0);
+            this.pestanas.forEach(venta => {
+                venta.carrito.forEach(it => {
+                    if (it.id !== productoId) return;
+                    const pr = (it.presentaciones || []).find(pr => pr.id === it.presentacion_id);
+                    total += (parseFloat(it.cantidad) || 0) * (pr ? parseFloat(pr.factor_conversion) || 0 : 0);
+                });
             });
             return total;
         },
@@ -626,26 +799,28 @@ document.addEventListener('alpine:init', () => {
             return pr ? pr.nombre : '';
         },
 
-        get subtotalBs() {
-            return this.carrito.reduce((sum, i, idx) => {
-                const tasa = this.tasas[i.fuente_tasa]
-                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
-                    : 1;
-                return sum + (this.precioUsdItem(idx) * i.cantidad * tasa);
+        subtotalBsDe(venta) {
+            return venta.carrito.reduce((sum, i) => {
+                if (i.invalido) return sum;
+                const tasa = this.tasas[i.fuente_tasa] ? parseFloat(this.tasas[i.fuente_tasa].monto) : 1;
+                const pr = (i.presentaciones || []).find(x => x.id === i.presentacion_id);
+                const precioUsd = pr ? parseFloat(pr.precio_usd) || 0 : 0;
+                return sum + (precioUsd * i.cantidad * tasa);
             }, 0);
         },
 
-        get impuestosDesglose() {
+        impuestosDesgloseDe(venta) {
             const filas = new Map();
-            this.carrito.forEach((i, idx) => {
+            venta.carrito.forEach((i) => {
+                if (i.invalido) return;
                 const imp = i.impuesto;
                 if (!imp) return;
                 const porcentaje = parseFloat(imp.porcentaje) || 0;
                 if (!(porcentaje > 0)) return;
-                const tasa = this.tasas[i.fuente_tasa]
-                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
-                    : 1;
-                const impuestoBs = this.precioUsdItem(idx) * i.cantidad * tasa * (porcentaje / 100);
+                const tasa = this.tasas[i.fuente_tasa] ? parseFloat(this.tasas[i.fuente_tasa].monto) : 1;
+                const pr = (i.presentaciones || []).find(x => x.id === i.presentacion_id);
+                const precioUsd = pr ? parseFloat(pr.precio_usd) || 0 : 0;
+                const impuestoBs = precioUsd * i.cantidad * tasa * (porcentaje / 100);
                 const key = String(imp.id);
                 if (!filas.has(key)) {
                     filas.set(key, { id: imp.id, nombre: imp.nombre, porcentaje, bs: 0 });
@@ -653,6 +828,22 @@ document.addEventListener('alpine:init', () => {
                 filas.get(key).bs += impuestoBs;
             });
             return Array.from(filas.values()).map(f => ({ ...f, bs: Math.round(f.bs * 100) / 100 }));
+        },
+
+        ivaBsDe(venta) {
+            return this.impuestosDesgloseDe(venta).reduce((sum, f) => sum + f.bs, 0);
+        },
+
+        totalBsDe(venta) {
+            return this.subtotalBsDe(venta) + this.ivaBsDe(venta);
+        },
+
+        get subtotalBs() {
+            return this.ventaActual ? this.subtotalBsDe(this.ventaActual) : 0;
+        },
+
+        get impuestosDesglose() {
+            return this.ventaActual ? this.impuestosDesgloseDe(this.ventaActual) : [];
         },
 
         get ivaBs() {
@@ -793,6 +984,10 @@ document.addEventListener('alpine:init', () => {
 
         confirmarFactura() {
             if (this.carrito.length === 0) return;
+            if (this.tieneItemsInvalidos) {
+                this.mostrarError('Hay productos no disponibles en el carrito. Quítelos para facturar.');
+                return;
+            }
             if (this.tipoFactura === 'credito' && !this.clienteId) {
                 this.mostrarError('Debe seleccionar un cliente para facturas a crédito.');
                 return;
@@ -818,9 +1013,8 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
             }
-            // Clave idempotente: se genera una sola vez por venta y se reutiliza en reintentos.
             if (!this.idempotenciaKey) {
-                this.idempotenciaKey = (crypto.randomUUID ? crypto.randomUUID() : 'vta-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+                this.idempotenciaKey = this.nuevoId();
             }
             const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
             modal.show();
@@ -871,14 +1065,9 @@ document.addEventListener('alpine:init', () => {
                     } else {
                         this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
                     }
-                    this.carrito = [];
-                    this.metodoPago = 'efectivo';
-                    this.datosPago = { referencia: '', telefono: '' };
-                    this.idempotenciaKey = null;
-                    this.tipoFactura = 'contado';
-                    this.clienteId = '';
-                    this.pago1 = { metodo: 'efectivo', monto: 0, referencia: '', telefono: '' };
-                    this.pago2 = { metodo: 'punto', monto: 0, referencia: '', telefono: '' };
+                    this.pestanas.splice(this.pestanaActiva, 1);
+                    if (this.pestanas.length === 0) this.nuevaVenta();
+                    else if (this.pestanaActiva >= this.pestanas.length) this.pestanaActiva = this.pestanas.length - 1;
                 } else {
                     this.mostrarError('Error: ' + data.message);
                 }
