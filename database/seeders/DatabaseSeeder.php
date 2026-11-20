@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             ConfiguracionSeeder::class,
             UserSeeder::class,
             PermisoSeeder::class,
+            TasaReferenciaSeeder::class,
+            ProductosPruebaSeeder::class,
         ]);
     }
 }
